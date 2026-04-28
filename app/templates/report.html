@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Monthly Report — {{ month }}{% endblock %}
+{% block nav_report %}active{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+  <h1 class="text-xl font-bold">Monthly Report — <span id="reportTitle">{{ month }}</span></h1>
+  <div class="flex gap-2 items-center">
+    <label class="text-sm text-gray-400">Month:</label>
+    <input type="month" id="monthPicker" value="{{ month }}"
+      class="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm text-white"
+      onchange="location.href='/report?month='+this.value" />
+  </div>
+</div>
+
+<!-- Summary stat cards -->
+<div id="summaryCards" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"></div>
+
+<!-- Sport breakdown + recovery detail -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+  <div class="card">
+    <div class="text-sm font-semibold text-gray-300 mb-3">Training by Sport</div>
+    <div id="chartSportBreakdown" style="height:220px"></div>
+  </div>
+  <div class="card">
+    <div class="text-sm font-semibold text-gray-300 mb-3">Recovery This Month</div>
+    <div id="chartMonthRecovery" style="height:220px"></div>
+  </div>
+</div>
+
+<!-- Activity timeline -->
+<div class="card mb-4">
+  <div class="text-sm font-semibold text-gray-300 mb-3">Activity Timeline</div>
+  <div id="activityList" class="space-y-1 text-sm max-h-64 overflow-y-auto"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const MONTH = '{{ month }}';
+
+async function loadReport() {
+  const [summary, recovery, activities] = await Promise.all([
+    fetch('/api/monthly-summary?month=' + MONTH).then(r => r.json()),
+    fetch('/api/recovery?days=90').then(r => r.json()),
+    fetch('/api/activities?weeks=52').then(r => r.json()),
+  ]);
+
+  const monthActivities = activities.filter(a => a.date.startsWith(MONTH));
+  const monthRecovery = recovery.filter(r => r.date.startsWith(MONTH));
+
+  renderSummaryCards(summary);
+  renderSportBreakdown(summary.training.by_sport);
+  renderMonthRecovery(monthRecovery);
+  renderActivityList(monthActivities);
+}
+
+function renderSummaryCards(s) {
+  const r = s.recovery, t = s.training;
+  const cards = [
+    { label: 'Avg Recovery', value: r.avg_recovery_score != null ? Math.round(r.avg_recovery_score) + '%' : '—', color: '#48bb78' },
+    { label: 'Avg HRV', value: r.avg_hrv != null ? Math.round(r.avg_hrv) + ' ms' : '—', color: '#63b3ed' },
+    { label: 'Total Training', value: t.total_duration_hours + ' hrs', color: '#b794f4' },
+    { label: 'Total Distance', value: t.total_distance_km + ' km', color: '#f6ad55' },
+  ];
+  document.getElementById('summaryCards').innerHTML = cards.map(c => `
+    <div class="card">
+      <div class="stat-value" style="color:${c.color}">${c.value}</div>
+      <div class="stat-label">${c.label}</div>
+    </div>
+  `).join('');
+}
+
+function renderSportBreakdown(bySport) {
+  const sports = Object.entries(bySport);
+  if (!sports.length) { document.getElementById('chartSportBreakdown').innerHTML = '<p class="text-gray-500 text-sm pt-8 text-center">No activities this month</p>'; return; }
+  Plotly.newPlot('chartSportBreakdown', [{
+    labels: sports.map(([s]) => s),
+    values: sports.map(([, v]) => v.duration_hours),
+    type: 'pie',
+    hole: 0.45,
+    textinfo: 'label+percent',
+    marker: { colors: ['#b794f4','#63b3ed','#48bb78','#f6ad55','#fc8181'] },
+  }], { ...PLOTLY_LAYOUT, showlegend: false }, PLOTLY_CONFIG);
+}
+
+function renderMonthRecovery(data) {
+  Plotly.newPlot('chartMonthRecovery', [
+    { x: data.map(d => d.date), y: data.map(d => d.recovery_score), name: 'Recovery %', type: 'bar', marker: { color: '#48bb78' } },
+    { x: data.map(d => d.date), y: data.map(d => d.hrv_rmssd), name: 'HRV', type: 'scatter', mode: 'lines+markers', line: { color: '#63b3ed' }, yaxis: 'y2' },
+  ], {
+    ...PLOTLY_LAYOUT,
+    yaxis: { ...PLOTLY_LAYOUT.yaxis, range: [0, 100] },
+    yaxis2: { overlaying: 'y', side: 'right', gridcolor: 'transparent', color: '#63b3ed' },
+  }, PLOTLY_CONFIG);
+}
+
+function renderActivityList(activities) {
+  if (!activities.length) { document.getElementById('activityList').innerHTML = '<p class="text-gray-500">No activities recorded.</p>'; return; }
+  document.getElementById('activityList').innerHTML = activities.map(a => `
+    <div class="flex items-center justify-between py-1.5 border-b border-gray-800">
+      <div class="flex items-center gap-3">
+        <span class="text-gray-500 w-20">${a.date}</span>
+        <span class="text-gray-300">${a.name || a.sport_type || 'Activity'}</span>
+      </div>
+      <div class="flex gap-4 text-gray-400 text-xs">
+        ${a.distance_km ? `<span>${a.distance_km} km</span>` : ''}
+        ${a.duration_minutes ? `<span>${a.duration_minutes} min</span>` : ''}
+        ${a.avg_hr ? `<span>${Math.round(a.avg_hr)} bpm</span>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+loadReport();
+</script>
+{% endblock %}

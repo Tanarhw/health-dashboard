@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Health Dashboard{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' }
+  </script>
+  <style>
+    body { background: #0f1117; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; }
+    .card { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 12px; padding: 1.25rem; }
+    .stat-value { font-size: 2rem; font-weight: 700; line-height: 1; }
+    .stat-label { font-size: 0.75rem; color: #718096; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.25rem; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; }
+    .tag-green { background: #1a3a2a; color: #48bb78; }
+    .tag-yellow { background: #3a3010; color: #ecc94b; }
+    .tag-red { background: #3a1a1a; color: #fc8181; }
+    nav a { color: #a0aec0; transition: color 0.15s; }
+    nav a:hover, nav a.active { color: #fff; }
+  </style>
+</head>
+<body class="min-h-screen">
+  <header class="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-8">
+      <span class="font-bold text-lg tracking-tight">Health Dashboard</span>
+      <nav class="flex gap-6 text-sm">
+        <a href="/" class="{% block nav_dashboard %}{% endblock %}">Dashboard</a>
+        <a href="/report" class="{% block nav_report %}{% endblock %}">Monthly Report</a>
+      </nav>
+    </div>
+    <div class="flex items-center gap-3">
+      <button id="syncBtn" onclick="triggerSync()"
+        class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-md transition">
+        Sync Now
+      </button>
+      <a href="/auth/whoop" class="text-xs text-gray-400 hover:text-white transition">Connect Whoop</a>
+      <a href="/auth/strava" class="text-xs text-gray-400 hover:text-white transition">Connect Strava</a>
+    </div>
+  </header>
+  <main class="px-6 py-6 max-w-7xl mx-auto">
+    {% block content %}{% endblock %}
+  </main>
+  <script>
+    async function triggerSync() {
+      const btn = document.getElementById('syncBtn');
+      btn.textContent = 'Syncing...';
+      btn.disabled = true;
+      await fetch('/sync/all', { method: 'POST' });
+      setTimeout(() => { btn.textContent = 'Sync Now'; btn.disabled = false; location.reload(); }, 8000);
+    }
+    const PLOTLY_LAYOUT = {
+      paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+      font: { color: '#a0aec0', size: 11 },
+      xaxis: { gridcolor: '#2d3748', linecolor: '#2d3748' },
+      yaxis: { gridcolor: '#2d3748', linecolor: '#2d3748' },
+      margin: { t: 30, r: 10, b: 40, l: 45 },
+      legend: { bgcolor: 'transparent', font: { color: '#a0aec0' } },
+      hoverlabel: { bgcolor: '#1a1f2e', bordercolor: '#4a5568', font: { color: '#e2e8f0' } },
+    };
+    const PLOTLY_CONFIG = { responsive: true, displayModeBar: false };
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
