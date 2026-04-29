@@ -88,8 +88,6 @@
 {% block scripts %}
 <script>
 const GOALS = { recovery: 67, hrv: 50, sleep_hours: 7.5, sleep_efficiency: 85 };
-const SPORT_ALIASES = { 'workout': 'Jiu Jitsu' };
-function displaySport(s) { return (s && SPORT_ALIASES[s.toLowerCase()]) || s || 'other'; }
 
 // --- Generic toggle builder ---
 function makeToggle(containerId, options, defaultVal, onChange) {

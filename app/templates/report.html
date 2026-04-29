@@ -38,8 +38,6 @@
 {% block scripts %}
 <script>
 const MONTH = '{{ month }}';
-const SPORT_ALIASES = { 'workout': 'Jiu Jitsu' };
-function displaySport(s) { return (s && SPORT_ALIASES[s.toLowerCase()]) || s || 'other'; }
 
 async function loadReport() {
   const [summary, recovery, activities] = await Promise.all([

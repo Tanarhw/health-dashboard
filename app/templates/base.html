@@ -51,19 +51,26 @@
       await fetch('/sync/all', { method: 'POST' });
       setTimeout(() => { btn.textContent = 'Sync Now'; btn.disabled = false; location.reload(); }, 8000);
     }
+    const SPORT_ALIASES = { 'workout': 'Jiu Jitsu' };
+    function displaySport(s) {
+      if (!s) return 'other';
+      const aliased = SPORT_ALIASES[s.toLowerCase()];
+      if (aliased) return aliased;
+      return s.replace(/([a-z])([A-Z])/g, '$1 $2');
+    }
     const SPORT_COLORS = {
-      'Run':            '#f97316',
-      'Ride':           '#38bdf8',
-      'VirtualRide':    '#60a5fa',
-      'Swim':           '#2dd4bf',
-      'Hike':           '#4ade80',
-      'Walk':           '#86efac',
-      'Jiu Jitsu':      '#c084fc',
-      'WeightTraining': '#fb923c',
-      'Yoga':           '#f472b6',
-      'NordicSki':      '#e2e8f0',
-      'Rowing':         '#facc15',
-      'other':          '#94a3b8',
+      'Run':             '#f97316',
+      'Ride':            '#38bdf8',
+      'Virtual Ride':    '#60a5fa',
+      'Swim':            '#2dd4bf',
+      'Hike':            '#4ade80',
+      'Walk':            '#86efac',
+      'Jiu Jitsu':       '#c084fc',
+      'Weight Training': '#fb923c',
+      'Yoga':            '#f472b6',
+      'Nordic Ski':      '#e2e8f0',
+      'Rowing':          '#facc15',
+      'other':           '#94a3b8',
     };
     const FALLBACK_COLORS = ['#f97316','#38bdf8','#c084fc','#2dd4bf','#facc15','#fb923c','#f472b6'];
     function sportColor(name, idx) { return SPORT_COLORS[name] || FALLBACK_COLORS[idx % FALLBACK_COLORS.length]; }
