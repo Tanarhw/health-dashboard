@@ -6,32 +6,38 @@
   <title>{% block title %}Health Dashboard{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <style>
-    *, *::before, *::after { box-sizing: border-box; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; }
 
     :root {
-      --bg:            #060a14;
-      --bg-card:       rgba(13, 19, 35, 0.72);
-      --border:        rgba(99, 102, 241, 0.13);
-      --border-hover:  rgba(99, 102, 241, 0.38);
-      --accent:        #6366f1;
-      --accent2:       #8b5cf6;
-      --text:          #e2e8f0;
-      --text-muted:    #64748b;
-      --grid:          rgba(99, 102, 241, 0.07);
+      --bg:           #030712;
+      --bg-card:      rgba(4, 11, 24, 0.9);
+      --cyan:         #06b6d4;
+      --cyan-hi:      #22d3ee;
+      --cyan-lo:      rgba(6,182,212,0.12);
+      --amber:        #f59e0b;
+      --neon-green:   #00e5a0;
+      --electric-red: #f43f5e;
+      --border:       rgba(6,182,212,0.11);
+      --border-active:rgba(6,182,212,0.38);
+      --text:         #cdd6e8;
+      --text-muted:   #3d5570;
     }
 
     html { scroll-behavior: smooth; }
 
     body {
       background-color: var(--bg);
+      /* Subtle tech grid + two atmospheric blooms */
       background-image:
-        radial-gradient(ellipse 90% 55% at 8%  -5%, rgba(99,102,241,0.13) 0%, transparent 55%),
-        radial-gradient(ellipse 70% 45% at 92% 105%, rgba(139,92,246,0.10) 0%, transparent 55%),
-        radial-gradient(ellipse 50% 35% at 50%  50%, rgba(6,182,212,0.04) 0%, transparent 60%);
+        linear-gradient(rgba(6,182,212,0.028) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(6,182,212,0.028) 1px, transparent 1px),
+        radial-gradient(ellipse 90% 55% at 12% -8%, rgba(6,182,212,0.13) 0%, transparent 52%),
+        radial-gradient(ellipse 60% 40% at 88% 108%, rgba(245,158,11,0.07) 0%, transparent 52%);
+      background-size: 48px 48px, 48px 48px, 100% 100%, 100% 100%;
       background-attachment: fixed;
       color: var(--text);
       font-family: 'Inter', system-ui, sans-serif;
@@ -42,150 +48,152 @@
 
     /* ── Header ── */
     header {
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      background: rgba(6, 10, 20, 0.82);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(3, 7, 18, 0.92);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      border-bottom: 1px solid rgba(6,182,212,0.1);
+      box-shadow: 0 0 0 0 transparent, 0 4px 32px rgba(0,0,0,0.6);
+    }
+    /* Faint cyan glow line under header */
+    header::after {
+      content: '';
+      position: absolute; bottom: -1px; left: 10%; right: 10%; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(6,182,212,0.35) 40%, rgba(6,182,212,0.35) 60%, transparent);
+      pointer-events: none;
     }
 
     /* ── Cards ── */
     .card {
       background: var(--bg-card);
       border: 1px solid var(--border);
-      border-radius: 18px;
+      border-radius: 12px;
       padding: 1.5rem;
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      transition: border-color 0.25s ease, box-shadow 0.25s ease;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      position: relative;
+      transition: border-color 0.22s, box-shadow 0.22s;
     }
     .card:hover {
-      border-color: var(--border-hover);
-      box-shadow: 0 0 0 1px rgba(99,102,241,0.06), 0 8px 32px rgba(0,0,0,0.35);
+      border-color: var(--border-active);
+      box-shadow: 0 0 28px rgba(6,182,212,0.07), 0 8px 40px rgba(0,0,0,0.5);
+    }
+    /* Corner bracket top-left */
+    .card::before {
+      content: '';
+      position: absolute; top: -1px; left: -1px;
+      width: 14px; height: 14px;
+      border-top: 1.5px solid rgba(6,182,212,0.38);
+      border-left: 1.5px solid rgba(6,182,212,0.38);
+      border-radius: 12px 0 0 0;
+      pointer-events: none;
+    }
+    /* Corner bracket bottom-right */
+    .card::after {
+      content: '';
+      position: absolute; bottom: -1px; right: -1px;
+      width: 14px; height: 14px;
+      border-bottom: 1.5px solid rgba(6,182,212,0.22);
+      border-right: 1.5px solid rgba(6,182,212,0.22);
+      border-radius: 0 0 12px 0;
+      pointer-events: none;
     }
 
     /* ── Stat cards ── */
-    .stat-card { position: relative; overflow: hidden; }
+    .stat-card { overflow: hidden; }
+    /* Stat card overrides ::after for inner glow instead of bracket */
     .stat-card::after {
       content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: 18px;
-      background: radial-gradient(ellipse at 0% 0%, rgba(255,255,255,0.04) 0%, transparent 65%);
+      position: absolute; inset: 0; border-radius: 12px;
+      background: radial-gradient(ellipse at 10% 10%, rgba(255,255,255,0.025) 0%, transparent 55%);
       pointer-events: none;
     }
     .stat-value {
-      font-size: 2.1rem;
-      font-weight: 750;
-      line-height: 1;
-      letter-spacing: -0.03em;
+      font-size: 2.25rem; font-weight: 800;
+      line-height: 1; letter-spacing: -0.035em;
     }
     .stat-label {
-      font-size: 0.68rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.09em;
-      font-weight: 500;
-      margin-top: 0.45rem;
+      font-size: 0.65rem; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.11em;
+      font-weight: 700; margin-top: 0.45rem;
     }
 
     /* ── Tags ── */
     .tag {
-      display: inline-block;
-      padding: 2px 10px;
-      border-radius: 9999px;
-      font-size: 0.67rem;
-      font-weight: 600;
-      letter-spacing: 0.03em;
+      display: inline-block; padding: 2px 9px;
+      border-radius: 4px; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.05em;
     }
-    .tag-green  { background: rgba(74,222,128,0.10); color: #4ade80; border: 1px solid rgba(74,222,128,0.22); }
-    .tag-yellow { background: rgba(251,191,36,0.10); color: #fbbf24; border: 1px solid rgba(251,191,36,0.22); }
-    .tag-red    { background: rgba(248,113,113,0.10); color: #f87171; border: 1px solid rgba(248,113,113,0.22); }
+    .tag-green  { background: rgba(0,229,160,0.07);  color: #00e5a0; border: 1px solid rgba(0,229,160,0.22); }
+    .tag-yellow { background: rgba(245,158,11,0.07); color: #f59e0b; border: 1px solid rgba(245,158,11,0.22); }
+    .tag-red    { background: rgba(244,63,94,0.07);  color: #f43f5e; border: 1px solid rgba(244,63,94,0.22); }
 
     /* ── Nav ── */
     nav a {
-      color: var(--text-muted);
-      font-weight: 500;
-      font-size: 0.875rem;
-      transition: color 0.15s;
-      position: relative;
-      padding-bottom: 2px;
+      color: #2d4460; font-weight: 500; font-size: 0.875rem;
+      transition: color 0.15s; position: relative; padding-bottom: 3px;
+      text-decoration: none;
     }
-    nav a:hover { color: #cbd5e1; }
-    nav a.active { color: #fff; }
+    nav a:hover { color: #7a99bb; }
+    nav a.active { color: #e2e8f0; }
     nav a.active::after {
       content: '';
-      position: absolute;
-      bottom: -2px;
-      left: 0; right: 0;
-      height: 2px;
-      border-radius: 1px;
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      position: absolute; bottom: -2px; left: 0; right: 0;
+      height: 2px; border-radius: 1px;
+      background: linear-gradient(90deg, var(--cyan), var(--cyan-hi));
+      box-shadow: 0 0 10px rgba(6,182,212,0.7);
     }
 
     /* ── Sync button ── */
     .btn-primary {
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: white;
-      font-size: 0.75rem;
-      font-weight: 600;
-      padding: 0.4rem 1rem;
-      border-radius: 9999px;
-      border: none;
-      cursor: pointer;
-      letter-spacing: 0.02em;
-      transition: opacity 0.15s, transform 0.15s;
-      box-shadow: 0 2px 12px rgba(99,102,241,0.35);
+      background: linear-gradient(135deg, #0e7490, #06b6d4);
+      color: #fff; font-size: 0.73rem; font-weight: 700;
+      padding: 0.4rem 1.1rem; border-radius: 6px; border: none;
+      cursor: pointer; letter-spacing: 0.07em; text-transform: uppercase;
+      transition: box-shadow 0.18s, opacity 0.18s;
+      box-shadow: 0 0 18px rgba(6,182,212,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
     }
-    .btn-primary:hover { opacity: 0.88; transform: scale(1.02); }
-    .btn-primary:disabled { opacity: 0.45; transform: none; cursor: default; box-shadow: none; }
+    .btn-primary:hover { box-shadow: 0 0 28px rgba(6,182,212,0.6), inset 0 1px 0 rgba(255,255,255,0.1); }
+    .btn-primary:disabled { opacity: 0.35; box-shadow: none; cursor: default; }
 
     /* ── Toggle buttons ── */
-    .toggle-btn {
-      border-radius: 5px;
-      font-weight: 500;
-      font-size: 0.72rem;
-    }
+    .toggle-btn { border-radius: 4px; font-weight: 600; font-size: 0.7rem; letter-spacing: 0.03em; }
 
     /* ── Scrollbar ── */
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.28); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.5); }
+    ::-webkit-scrollbar-thumb { background: rgba(6,182,212,0.25); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(6,182,212,0.5); }
 
     /* ── Animations ── */
     @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(14px); }
+      from { opacity: 0; transform: translateY(16px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    .fade-up   { animation: fadeUp 0.45s cubic-bezier(0.22,1,0.36,1) both; }
-    .delay-1   { animation-delay: 0.06s; }
-    .delay-2   { animation-delay: 0.12s; }
-    .delay-3   { animation-delay: 0.18s; }
-    .delay-4   { animation-delay: 0.24s; }
+    .fade-up { animation: fadeUp 0.5s cubic-bezier(0.22,1,0.36,1) both; }
+    .delay-1 { animation-delay: 0.05s; }
+    .delay-2 { animation-delay: 0.10s; }
+    .delay-3 { animation-delay: 0.15s; }
+    .delay-4 { animation-delay: 0.20s; }
   </style>
 </head>
 <body>
   <header class="px-6 py-3.5 flex items-center justify-between">
     <div class="flex items-center gap-8">
       <a href="/" style="display:flex;align-items:center;gap:12px;text-decoration:none">
-        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;filter:drop-shadow(0 2px 10px rgba(99,102,241,0.45))">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;filter:drop-shadow(0 0 10px rgba(6,182,212,0.55))">
           <defs>
             <linearGradient id="lg" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stop-color="#6366f1"/>
-              <stop offset="100%" stop-color="#a855f7"/>
+              <stop offset="0%" stop-color="#0e7490"/>
+              <stop offset="100%" stop-color="#06b6d4"/>
             </linearGradient>
           </defs>
-          <rect width="36" height="36" rx="10" fill="url(#lg)"/>
-          <!-- T mark: crossbar + stem, no overlap -->
-          <rect x="7" y="8" width="22" height="5" rx="2" fill="white"/>
-          <rect x="15" y="13" width="6" height="15" rx="2" fill="white"/>
+          <rect width="36" height="36" rx="9" fill="url(#lg)"/>
+          <rect x="7" y="8" width="22" height="5" rx="2" fill="white" fill-opacity="0.95"/>
+          <rect x="15" y="13" width="6" height="15" rx="2" fill="white" fill-opacity="0.95"/>
         </svg>
         <div style="line-height:1">
-          <div style="font-size:1.05rem;font-weight:800;letter-spacing:0.1em;background:linear-gradient(120deg,#a5b4fc 0%,#c084fc 50%,#e879f9 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">TANAR</div>
-          <div style="font-size:0.58rem;color:#475569;letter-spacing:0.2em;font-weight:600;margin-top:3px">HEALTH</div>
+          <div style="font-size:1.05rem;font-weight:900;letter-spacing:0.12em;background:linear-gradient(110deg,#e2e8f0 0%,#67e8f9 45%,#22d3ee 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">TANAR</div>
+          <div style="font-size:0.57rem;color:#1e3a50;letter-spacing:0.22em;font-weight:700;margin-top:3px">HEALTH</div>
         </div>
       </a>
       <nav class="flex gap-6">
@@ -193,10 +201,10 @@
         <a href="/report" class="{% block nav_report %}{% endblock %}">Monthly Report</a>
       </nav>
     </div>
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-5">
       <button id="syncBtn" onclick="triggerSync()" class="btn-primary">Sync Now</button>
-      <a href="/auth/whoop" class="text-xs font-medium transition" style="color:var(--text-muted)" onmouseover="this.style.color='#cbd5e1'" onmouseout="this.style.color='var(--text-muted)'">Connect Whoop</a>
-      <a href="/auth/strava" class="text-xs font-medium transition" style="color:var(--text-muted)" onmouseover="this.style.color='#cbd5e1'" onmouseout="this.style.color='var(--text-muted)'">Connect Strava</a>
+      <a href="/auth/whoop" style="font-size:0.72rem;font-weight:500;color:#1e3a50;transition:color 0.15s;text-decoration:none" onmouseover="this.style.color='#64748b'" onmouseout="this.style.color='#1e3a50'">Connect Whoop</a>
+      <a href="/auth/strava" style="font-size:0.72rem;font-weight:500;color:#1e3a50;transition:color 0.15s;text-decoration:none" onmouseover="this.style.color='#64748b'" onmouseout="this.style.color='#1e3a50'">Connect Strava</a>
     </div>
   </header>
 
@@ -222,31 +230,31 @@
     }
 
     const SPORT_COLORS = {
-      'Run':             '#f97316',
-      'Ride':            '#38bdf8',
-      'Virtual Ride':    '#60a5fa',
-      'Swim':            '#2dd4bf',
-      'Hike':            '#4ade80',
-      'Walk':            '#86efac',
-      'Jiu Jitsu':       '#c084fc',
-      'Weight Training': '#fb923c',
+      'Run':             '#f43f5e',
+      'Ride':            '#22d3ee',
+      'Virtual Ride':    '#38bdf8',
+      'Swim':            '#0ea5e9',
+      'Hike':            '#00e5a0',
+      'Walk':            '#34d399',
+      'Jiu Jitsu':       '#a78bfa',
+      'Weight Training': '#f59e0b',
       'Yoga':            '#f472b6',
       'Nordic Ski':      '#e2e8f0',
-      'Rowing':          '#facc15',
-      'other':           '#94a3b8',
+      'Rowing':          '#fbbf24',
+      'other':           '#334155',
     };
-    const FALLBACK_COLORS = ['#f97316','#38bdf8','#c084fc','#2dd4bf','#facc15','#fb923c','#f472b6'];
+    const FALLBACK_COLORS = ['#f43f5e','#22d3ee','#a78bfa','#f59e0b','#00e5a0','#f472b6','#38bdf8'];
     function sportColor(name, idx) { return SPORT_COLORS[name] || FALLBACK_COLORS[idx % FALLBACK_COLORS.length]; }
 
     const PLOTLY_LAYOUT = {
       paper_bgcolor: 'transparent',
       plot_bgcolor:  'transparent',
-      font: { color: '#64748b', size: 11, family: 'Inter, system-ui, sans-serif' },
-      xaxis: { gridcolor: 'rgba(99,102,241,0.08)', linecolor: 'rgba(99,102,241,0.12)', tickcolor: 'transparent' },
-      yaxis: { gridcolor: 'rgba(99,102,241,0.08)', linecolor: 'rgba(99,102,241,0.12)', tickcolor: 'transparent' },
+      font: { color: '#3d5570', size: 11, family: 'Inter, system-ui, sans-serif' },
+      xaxis: { gridcolor: 'rgba(6,182,212,0.055)', linecolor: 'rgba(6,182,212,0.1)', tickcolor: 'transparent' },
+      yaxis: { gridcolor: 'rgba(6,182,212,0.055)', linecolor: 'rgba(6,182,212,0.1)', tickcolor: 'transparent' },
       margin: { t: 30, r: 10, b: 40, l: 48 },
-      legend: { bgcolor: 'transparent', font: { color: '#94a3b8', size: 11 } },
-      hoverlabel: { bgcolor: '#0d1323', bordercolor: 'rgba(99,102,241,0.35)', font: { color: '#e2e8f0', size: 12 } },
+      legend: { bgcolor: 'transparent', font: { color: '#64748b', size: 11 } },
+      hoverlabel: { bgcolor: '#030712', bordercolor: 'rgba(6,182,212,0.45)', font: { color: '#e2e8f0', size: 12 } },
     };
     const PLOTLY_CONFIG = { responsive: true, displayModeBar: false };
   </script>
