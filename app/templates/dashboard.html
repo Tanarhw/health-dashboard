@@ -173,7 +173,7 @@ async function loadDashboard() {
     fetch('/api/recovery?days=60').then(r => r.json()),
     fetch('/api/sleep?days=60').then(r => r.json()),
     fetch('/api/training-load?weeks=16').then(r => r.json()),
-    fetch('/api/activities?weeks=12&source=whoop').then(r => r.json()),
+    fetch('/api/activities?weeks=12').then(r => r.json()),
     fetch('/api/garmin-daily?days=60').then(r => r.json()),
     fetch('/api/readiness?weeks=12').then(r => r.json()),
     fetch('/api/vo2max?days=365').then(r => r.json()),
@@ -191,7 +191,7 @@ async function loadDashboard() {
   makeToggle('toggleRecovery', DAYS, 60, async d => renderRecoveryChart(await fetch(`/api/recovery?days=${d}`).then(r => r.json())));
   makeToggle('toggleLoad',     WEEKS, 16, async w => renderLoadChart(await fetch(`/api/training-load?weeks=${w}`).then(r => r.json())));
   makeToggle('toggleSleep',    DAYS, 60, async d => renderSleepChart(await fetch(`/api/sleep?days=${d}`).then(r => r.json())));
-  makeToggle('toggleVolume',   WKSM, 12, async w => renderVolumeChart(await fetch(`/api/activities?weeks=${w}&source=whoop`).then(r => r.json())));
+  makeToggle('toggleVolume',   WKSM, 12, async w => renderVolumeChart(await fetch(`/api/activities?weeks=${w}`).then(r => r.json())));
   makeToggle('toggleReadiness',WKSM, 12, async w => renderReadinessChart(await fetch(`/api/readiness?weeks=${w}`).then(r => r.json())));
   makeToggle('toggleStrain',   DAYS, 60, async d => renderStrainRecovery(await fetch(`/api/recovery?days=${d}`).then(r => r.json())));
   makeToggle('toggleVo2',      MTHS, 365, async d => renderVo2Chart(await fetch(`/api/vo2max?days=${d}`).then(r => r.json())));
