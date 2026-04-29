@@ -41,11 +41,16 @@ def run_daily_sync():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(run_daily_sync, "cron", hour=4, minute=0)  # 4am daily
-    scheduler.start()
+    try:
+        scheduler = BackgroundScheduler()
+        scheduler.add_job(run_daily_sync, "cron", hour=4, minute=0)
+        scheduler.start()
+    except Exception as e:
+        print(f"[scheduler] Failed to start: {e}")
+        scheduler = None
     yield
-    scheduler.shutdown()
+    if scheduler:
+        scheduler.shutdown()
 
 
 app = FastAPI(title="Health Dashboard", lifespan=lifespan)
