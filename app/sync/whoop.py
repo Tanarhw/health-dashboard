@@ -1,7 +1,29 @@
 from datetime import date, datetime, timedelta, timezone
 import httpx
 from sqlalchemy.orm import Session
-from app.models import OAuthToken, WhoopRecovery, WhoopSleep
+from app.models import Activity, OAuthToken, WhoopRecovery, WhoopSleep
+
+# Whoop sport_id → display name (best-effort; falls back to "Activity")
+WHOOP_SPORTS = {
+    -1: "Activity",
+    0:  "Run",
+    1:  "Ride",
+    8:  "Basketball",
+    9:  "Baseball",
+    16: "Weight Training",
+    35: "Soccer",
+    44: "Yoga",
+    45: "Meditation",
+    63: "Jiu Jitsu",
+    64: "Boxing",
+    74: "Swim",
+    85: "Hike",
+    86: "Walk",
+    87: "Elliptical",
+    97: "CrossFit",
+    126:"HIIT",
+    127:"Pilates",
+}
 
 WHOOP_BASE = "https://api.prod.whoop.com/developer/v2"
 TOKEN_URL = "https://api.prod.whoop.com/oauth/oauth2/token"
@@ -126,5 +148,56 @@ def sync_sleep(db: Session, client_id: str, client_secret: str, days: int = 90):
                 sleep_efficiency=score.get("sleep_efficiency_percentage"),
                 sleep_score=score.get("sleep_performance_percentage"),
             ))
+
+    db.commit()
+
+
+def sync_workouts(db: Session, client_id: str, client_secret: str, days: int = 90):
+    token = get_token(db)
+    if not token:
+        raise RuntimeError("Whoop not connected — visit /auth/whoop")
+    _refresh_if_needed(db, token, client_id, client_secret)
+
+    start = (date.today() - timedelta(days=days)).isoformat() + "T00:00:00.000Z"
+
+    for workout in _paginate(f"{WHOOP_BASE}/workout", _headers(token), start):
+        external_id = str(workout["id"])
+        existing = db.query(Activity).filter_by(source="whoop", external_id=external_id).first()
+        if existing:
+            continue
+
+        score = workout.get("score") or {}
+        zones = score.get("zone_duration") or {}
+
+        try:
+            start_dt = datetime.fromisoformat(workout["start"].replace("Z", "+00:00"))
+            end_dt   = datetime.fromisoformat(workout["end"].replace("Z", "+00:00"))
+            duration_secs = int((end_dt - start_dt).total_seconds())
+        except Exception:
+            duration_secs = None
+
+        sport_name = WHOOP_SPORTS.get(workout.get("sport_id", -1), "Activity")
+
+        # Whoop uses 6 zones (0-5). Combine zone_zero (sub-threshold) with
+        # zone_one so the result maps cleanly onto the standard 5-zone system.
+        def ms_to_s(key):
+            return int(zones.get(key, 0) / 1000)
+
+        db.add(Activity(
+            source="whoop",
+            external_id=external_id,
+            date=date.fromisoformat(workout["start"][:10]),
+            sport_type=sport_name,
+            name=f"Whoop {sport_name}",
+            duration_seconds=duration_secs,
+            distance_meters=score.get("distance_meter") or None,
+            avg_hr=score.get("average_heart_rate"),
+            tss=score.get("strain"),
+            zone1_secs=ms_to_s("zone_zero_milli") + ms_to_s("zone_one_milli"),
+            zone2_secs=ms_to_s("zone_two_milli"),
+            zone3_secs=ms_to_s("zone_three_milli"),
+            zone4_secs=ms_to_s("zone_four_milli"),
+            zone5_secs=ms_to_s("zone_five_milli"),
+        ))
 
     db.commit()
