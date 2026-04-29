@@ -191,6 +191,72 @@ def api_monthly_summary(month: str, db: Session = Depends(get_db)):
     }
 
 
+@router.get("/api/readiness")
+def api_readiness(weeks: int = 12, db: Session = Depends(get_db)):
+    today = date.today()
+
+    # 30-day HRV baseline for normalization
+    baseline_rows = db.query(WhoopRecovery).filter(
+        WhoopRecovery.date >= today - timedelta(days=30),
+        WhoopRecovery.hrv_rmssd.isnot(None),
+    ).all()
+    hrv_baseline = (
+        sum(r.hrv_rmssd for r in baseline_rows) / len(baseline_rows)
+        if baseline_rows else None
+    )
+
+    def wavg(vals):
+        v = [x for x in vals if x is not None]
+        return sum(v) / len(v) if v else None
+
+    result = []
+    for i in range(weeks - 1, -1, -1):
+        week_end = today - timedelta(weeks=i)
+        week_start = week_end - timedelta(days=6)
+
+        rec = db.query(WhoopRecovery).filter(
+            WhoopRecovery.date >= week_start, WhoopRecovery.date <= week_end
+        ).all()
+        slp = db.query(WhoopSleep).filter(
+            WhoopSleep.date >= week_start, WhoopSleep.date <= week_end
+        ).all()
+        load = db.query(GarminTrainingLoad).filter(
+            GarminTrainingLoad.date >= week_start, GarminTrainingLoad.date <= week_end
+        ).all()
+
+        avg_rec = wavg([r.recovery_score for r in rec])
+        avg_hrv = wavg([r.hrv_rmssd for r in rec])
+        avg_sleep = wavg([s.sleep_score for s in slp])
+
+        ratios = [r.acute_load / r.chronic_load for r in load
+                  if r.acute_load and r.chronic_load and r.chronic_load > 0]
+        avg_ratio = wavg(ratios)
+
+        if avg_ratio is None:    load_score = 70
+        elif avg_ratio < 0.8:    load_score = 65
+        elif avg_ratio <= 1.3:   load_score = 100
+        elif avg_ratio <= 1.5:   load_score = 55
+        else:                    load_score = 25
+
+        hrv_score = min(100, (avg_hrv / hrv_baseline) * 100) if (avg_hrv and hrv_baseline) else avg_hrv
+
+        components = [(avg_rec, 0.4), (avg_sleep, 0.3), (hrv_score, 0.2), (load_score, 0.1)]
+        valid = [(v, w) for v, w in components if v is not None]
+        total_w = sum(w for _, w in valid)
+        readiness = round(sum(v * w for v, w in valid) / total_w) if valid else None
+
+        result.append({
+            "week": week_start.isoformat(),
+            "readiness": readiness,
+            "avg_recovery": round(avg_rec, 1) if avg_rec else None,
+            "avg_hrv": round(avg_hrv, 1) if avg_hrv else None,
+            "avg_sleep": round(avg_sleep, 1) if avg_sleep else None,
+            "load_ratio": round(avg_ratio, 2) if avg_ratio else None,
+        })
+
+    return result
+
+
 def _group_by_sport(activities: list) -> dict:
     result = {}
     for a in activities:
