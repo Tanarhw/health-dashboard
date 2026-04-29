@@ -298,7 +298,7 @@ function renderStrainRecovery(recovery) {
     hovertemplate: '%{text}<br>Strain: %{x:.1f}<br>Next-day Recovery: %{y:.0f}%<extra></extra>',
   }], {
     ...PLOTLY_LAYOUT,
-    xaxis: { ...PLOTLY_LAYOUT.xaxis, title: "Today's Strain (0–21)" },
+    xaxis: { ...PLOTLY_LAYOUT.xaxis, type: 'linear', range: [0, 21], title: "Today's Strain (0–21)" },
     yaxis: { ...PLOTLY_LAYOUT.yaxis, title: 'Next-day Recovery %', range: [0, 105] },
     shapes: [goalLine('y', GOALS.recovery, '#48bb78')],
   }, PLOTLY_CONFIG);
