@@ -99,14 +99,12 @@ def api_training_load(weeks: int = 16, db: Session = Depends(get_db)):
 
 
 @router.get("/api/activities")
-def api_activities(weeks: int = 12, db: Session = Depends(get_db)):
+def api_activities(weeks: int = 12, source: str = None, db: Session = Depends(get_db)):
     since = date.today() - timedelta(weeks=weeks)
-    rows = (
-        db.query(Activity)
-        .filter(Activity.date >= since)
-        .order_by(Activity.date)
-        .all()
-    )
+    q = db.query(Activity).filter(Activity.date >= since)
+    if source:
+        q = q.filter(Activity.source == source)
+    rows = q.order_by(Activity.date).all()
     return [
         {
             "date": r.date.isoformat(),

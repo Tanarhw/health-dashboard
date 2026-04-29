@@ -221,11 +221,28 @@
       setTimeout(() => { btn.textContent = 'Sync Now'; btn.disabled = false; location.reload(); }, 8000);
     }
 
-    const SPORT_ALIASES = { 'workout': 'Jiu Jitsu' };
+    const SPORT_ALIASES = {
+      'workout':              'Jiu Jitsu',
+      'running':              'Run',
+      'trail_running':        'Run',
+      'strength_training':    'Weight Training',
+      'cycling':              'Ride',
+      'indoor_cycling':       'Ride',
+      'mountain_biking':      'Ride',
+      'swimming':             'Swim',
+      'open_water_swimming':  'Swim',
+      'hiking':               'Hike',
+      'walking':              'Walk',
+      'yoga':                 'Yoga',
+      'elliptical':           'Elliptical',
+      'rowing':               'Rowing',
+      'cross_country_skiing': 'Nordic Ski',
+    };
     function displaySport(s) {
       if (!s) return 'other';
       const aliased = SPORT_ALIASES[s.toLowerCase()];
       if (aliased) return aliased;
+      if (s.includes('_')) return s.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
       return s.replace(/([a-z])([A-Z])/g, '$1 $2');
     }
 
@@ -241,6 +258,7 @@
       'Yoga':            '#f472b6',
       'Nordic Ski':      '#e2e8f0',
       'Rowing':          '#fbbf24',
+      'Elliptical':      '#c084fc',
       'other':           '#334155',
     };
     const FALLBACK_COLORS = ['#f43f5e','#22d3ee','#a78bfa','#f59e0b','#00e5a0','#f472b6','#38bdf8'];
