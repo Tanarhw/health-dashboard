@@ -51,6 +51,23 @@
       await fetch('/sync/all', { method: 'POST' });
       setTimeout(() => { btn.textContent = 'Sync Now'; btn.disabled = false; location.reload(); }, 8000);
     }
+    const SPORT_COLORS = {
+      'Run':            '#f97316',
+      'Ride':           '#38bdf8',
+      'VirtualRide':    '#60a5fa',
+      'Swim':           '#2dd4bf',
+      'Hike':           '#4ade80',
+      'Walk':           '#86efac',
+      'Jiu Jitsu':      '#c084fc',
+      'WeightTraining': '#fb923c',
+      'Yoga':           '#f472b6',
+      'NordicSki':      '#e2e8f0',
+      'Rowing':         '#facc15',
+      'other':          '#94a3b8',
+    };
+    const FALLBACK_COLORS = ['#f97316','#38bdf8','#c084fc','#2dd4bf','#facc15','#fb923c','#f472b6'];
+    function sportColor(name, idx) { return SPORT_COLORS[name] || FALLBACK_COLORS[idx % FALLBACK_COLORS.length]; }
+
     const PLOTLY_LAYOUT = {
       paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
       font: { color: '#a0aec0', size: 11 },

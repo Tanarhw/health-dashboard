@@ -260,10 +260,9 @@ function renderVolumeChart(activities) {
   });
   const dates = Object.keys(weeks).sort();
   const sports = [...new Set(activities.map(a => displaySport(a.sport_type || 'other')))];
-  const colors = ['#b794f4', '#63b3ed', '#48bb78', '#f6ad55', '#fc8181'];
   Plotly.newPlot('chartVolume', sports.map((sport, i) => ({
     x: dates, y: dates.map(d => weeks[d][sport] || 0),
-    name: sport, type: 'bar', marker: { color: colors[i % colors.length] },
+    name: sport, type: 'bar', marker: { color: sportColor(sport, i) },
   })), { ...PLOTLY_LAYOUT, barmode: 'stack', yaxis: { ...PLOTLY_LAYOUT.yaxis, title: 'mi' } }, PLOTLY_CONFIG);
 }
 

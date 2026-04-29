@@ -82,7 +82,7 @@ function renderSportBreakdown(bySport) {
     type: 'pie',
     hole: 0.45,
     textinfo: 'label+percent',
-    marker: { colors: ['#b794f4','#63b3ed','#48bb78','#f6ad55','#fc8181'] },
+    marker: { colors: sports.map(([s], i) => sportColor(displaySport(s), i)) },
   }], { ...PLOTLY_LAYOUT, showlegend: false }, PLOTLY_CONFIG);
 }
 
