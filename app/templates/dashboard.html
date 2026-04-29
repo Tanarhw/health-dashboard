@@ -10,10 +10,17 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
   <div class="card">
     <div class="flex items-center justify-between mb-3">
-      <div class="text-sm font-semibold text-gray-300">Recovery & HRV <span class="text-gray-500 font-normal text-xs">— 60 days</span></div>
-      <div class="flex gap-3 text-xs text-gray-500">
-        <span class="flex items-center gap-1"><span style="display:inline-block;width:20px;border-top:1px dotted #48bb78"></span> Goal</span>
-        <span class="flex items-center gap-1"><span style="display:inline-block;width:20px;border-top:2px solid #48bb78;opacity:0.5"></span> 7d avg</span>
+      <div class="text-sm font-semibold text-gray-300">Recovery & HRV</div>
+      <div class="flex items-center gap-3">
+        <div class="flex gap-3 text-xs text-gray-500">
+          <span class="flex items-center gap-1"><span style="display:inline-block;width:20px;border-top:1px dotted #48bb78"></span> Goal</span>
+          <span class="flex items-center gap-1"><span style="display:inline-block;width:20px;border-top:2px solid #48bb78;opacity:0.5"></span> 7d avg</span>
+        </div>
+        <div class="flex rounded overflow-hidden border border-gray-700 text-xs">
+          <button onclick="setRecoveryDays(30)" id="recBtn30" class="range-btn px-2 py-1 text-gray-400 hover:text-white hover:bg-gray-700 transition">30d</button>
+          <button onclick="setRecoveryDays(60)" id="recBtn60" class="range-btn px-2 py-1 bg-gray-700 text-white">60d</button>
+          <button onclick="setRecoveryDays(90)" id="recBtn90" class="range-btn px-2 py-1 text-gray-400 hover:text-white hover:bg-gray-700 transition">90d</button>
+        </div>
       </div>
     </div>
     <div id="chartRecovery" style="height:220px"></div>
@@ -34,7 +41,14 @@
 <!-- Sleep & Volume -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
   <div class="card">
-    <div class="text-sm font-semibold text-gray-300 mb-3">Sleep <span class="text-gray-500 font-normal text-xs">— 60 days</span></div>
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-sm font-semibold text-gray-300">Sleep</div>
+      <div class="flex rounded overflow-hidden border border-gray-700 text-xs">
+        <button onclick="setSleepDays(30)" id="slpBtn30" class="range-btn px-2 py-1 text-gray-400 hover:text-white hover:bg-gray-700 transition">30d</button>
+        <button onclick="setSleepDays(60)" id="slpBtn60" class="range-btn px-2 py-1 bg-gray-700 text-white">60d</button>
+        <button onclick="setSleepDays(90)" id="slpBtn90" class="range-btn px-2 py-1 text-gray-400 hover:text-white hover:bg-gray-700 transition">90d</button>
+      </div>
+    </div>
     <div id="chartSleep" style="height:220px"></div>
   </div>
   <div class="card">
@@ -288,6 +302,27 @@ function renderGarminChart(data) {
     yaxis: { ...PLOTLY_LAYOUT.yaxis, title: 'Battery', range: [0, 100] },
     yaxis2: { overlaying: 'y', side: 'right', gridcolor: 'transparent', range: [0, 100], title: 'Stress', color: '#fc8181' },
   }, PLOTLY_CONFIG);
+}
+
+function setActiveBtn(group, days) {
+  [30, 60, 90].forEach(d => {
+    const btn = document.getElementById(`${group}Btn${d}`);
+    if (btn) {
+      btn.className = `range-btn px-2 py-1 transition text-xs ${d === days ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`;
+    }
+  });
+}
+
+async function setRecoveryDays(days) {
+  setActiveBtn('rec', days);
+  const data = await fetch(`/api/recovery?days=${days}`).then(r => r.json());
+  renderRecoveryChart(data);
+}
+
+async function setSleepDays(days) {
+  setActiveBtn('slp', days);
+  const data = await fetch(`/api/sleep?days=${days}`).then(r => r.json());
+  renderSleepChart(data);
 }
 
 loadDashboard();
