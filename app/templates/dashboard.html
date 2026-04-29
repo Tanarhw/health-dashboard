@@ -76,12 +76,38 @@
   </div>
 </div>
 
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+  <div class="card">
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-sm font-semibold text-gray-300">VO2 Max Trend</div>
+      <div id="toggleVo2"></div>
+    </div>
+    <div id="chartVo2" style="height:200px"></div>
+  </div>
+  <div class="card">
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-sm font-semibold text-gray-300">Body Battery & Stress</div>
+      <div id="toggleGarmin"></div>
+    </div>
+    <div id="chartGarmin" style="height:200px"></div>
+  </div>
+</div>
+
 <div class="card mb-4">
   <div class="flex items-center justify-between mb-3">
-    <div class="text-sm font-semibold text-gray-300">Body Battery & Stress</div>
-    <div id="toggleGarmin"></div>
+    <div class="text-sm font-semibold text-gray-300">Weekly Time in Heart Rate Zones</div>
+    <div class="flex items-center gap-3">
+      <div class="flex gap-2 text-xs" style="color:#64748b">
+        <span class="flex items-center gap-1"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#1e4d6b"></span>Z1 Recovery</span>
+        <span class="flex items-center gap-1"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#0ea5e9"></span>Z2 Base</span>
+        <span class="flex items-center gap-1"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#10b981"></span>Z3 Tempo</span>
+        <span class="flex items-center gap-1"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#f59e0b"></span>Z4 Threshold</span>
+        <span class="flex items-center gap-1"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#f43f5e"></span>Z5 Max</span>
+      </div>
+      <div id="toggleZones"></div>
+    </div>
   </div>
-  <div id="chartGarmin" style="height:180px"></div>
+  <div id="chartZones" style="height:220px"></div>
 </div>
 {% endblock %}
 
@@ -143,20 +169,24 @@ function goalLine(yref, y, color) {
 
 // --- Load dashboard ---
 async function loadDashboard() {
-  const [recovery, sleep, load, activities, garmin, readiness] = await Promise.all([
+  const [recovery, sleep, load, activities, garmin, readiness, vo2, zones] = await Promise.all([
     fetch('/api/recovery?days=60').then(r => r.json()),
     fetch('/api/sleep?days=60').then(r => r.json()),
     fetch('/api/training-load?weeks=16').then(r => r.json()),
     fetch('/api/activities?weeks=12').then(r => r.json()),
     fetch('/api/garmin-daily?days=60').then(r => r.json()),
     fetch('/api/readiness?weeks=12').then(r => r.json()),
+    fetch('/api/vo2max?days=365').then(r => r.json()),
+    fetch('/api/hr-zones?weeks=12').then(r => r.json()),
   ]);
 
-  renderStatCards(recovery, load, garmin, readiness);
+  renderStatCards(recovery, load, garmin, readiness, vo2);
 
-  const DAYS = [{ label: '30d', value: 30 }, { label: '60d', value: 60 }, { label: '90d', value: 90 }];
+  const DAYS  = [{ label: '30d', value: 30 }, { label: '60d', value: 60 }, { label: '90d', value: 90 }];
   const WEEKS = [{ label: '8w', value: 8 }, { label: '16w', value: 16 }, { label: '24w', value: 24 }];
-  const WKSM = [{ label: '4w', value: 4 }, { label: '8w', value: 8 }, { label: '12w', value: 12 }];
+  const WKSM  = [{ label: '4w', value: 4 }, { label: '8w', value: 8 }, { label: '12w', value: 12 }];
+  const MTHS  = [{ label: '3mo', value: 90 }, { label: '6mo', value: 180 }, { label: '1yr', value: 365 }];
+  const ZWKS  = [{ label: '8w', value: 8 }, { label: '16w', value: 16 }, { label: '26w', value: 26 }];
 
   makeToggle('toggleRecovery', DAYS, 60, async d => renderRecoveryChart(await fetch(`/api/recovery?days=${d}`).then(r => r.json())));
   makeToggle('toggleLoad',     WEEKS, 16, async w => renderLoadChart(await fetch(`/api/training-load?weeks=${w}`).then(r => r.json())));
@@ -164,7 +194,9 @@ async function loadDashboard() {
   makeToggle('toggleVolume',   WKSM, 12, async w => renderVolumeChart(await fetch(`/api/activities?weeks=${w}`).then(r => r.json())));
   makeToggle('toggleReadiness',WKSM, 12, async w => renderReadinessChart(await fetch(`/api/readiness?weeks=${w}`).then(r => r.json())));
   makeToggle('toggleStrain',   DAYS, 60, async d => renderStrainRecovery(await fetch(`/api/recovery?days=${d}`).then(r => r.json())));
+  makeToggle('toggleVo2',      MTHS, 365, async d => renderVo2Chart(await fetch(`/api/vo2max?days=${d}`).then(r => r.json())));
   makeToggle('toggleGarmin',   DAYS, 60, async d => renderGarminChart(await fetch(`/api/garmin-daily?days=${d}`).then(r => r.json())));
+  makeToggle('toggleZones',    ZWKS, 12, async w => renderZonesChart(await fetch(`/api/hr-zones?weeks=${w}`).then(r => r.json())));
 
   renderRecoveryChart(recovery);
   renderLoadChart(load);
@@ -172,17 +204,20 @@ async function loadDashboard() {
   renderVolumeChart(activities);
   renderReadinessChart(readiness);
   renderStrainRecovery(recovery);
+  renderVo2Chart(vo2);
   renderGarminChart(garmin);
+  renderZonesChart(zones);
 }
 
 // --- Stat cards ---
-function renderStatCards(recovery, load, garmin, readiness) {
+function renderStatCards(recovery, load, garmin, readiness, vo2) {
+  const latestVo2 = vo2.length ? vo2[vo2.length - 1].vo2max : null;
   const cards = [
-    { label: 'Recovery Score',   period: 'Today',     source: 'Whoop',  value: last(recovery, 'recovery_score'), fmt: v => Math.round(v) + '%',  color: v => scoreColor(v, 33, 67) },
-    { label: 'HRV (rMSSD)',      period: 'Last night', source: 'Whoop',  value: last(recovery, 'hrv_rmssd'),      fmt: v => Math.round(v) + ' ms', color: v => scoreColor(v, 35, GOALS.hrv) },
-    { label: 'Acute Load (ATL)', period: 'Current',   source: 'Garmin', value: last(load, 'acute_load'),          fmt: v => Math.round(v),         color: () => '#22d3ee' },
-    { label: 'Body Battery',     period: 'Today',     source: 'Garmin', value: last(garmin, 'body_battery_end'),  fmt: v => Math.round(v),         color: v => scoreColor(v, 25, 50) },
-    { label: 'Weekly Readiness', period: 'This week', source: null,     value: readiness.length ? readiness[readiness.length - 1].readiness : null, fmt: v => v + '%', color: v => scoreColor(v, 50, 75) },
+    { label: 'Recovery Score',   period: 'Today',      source: 'Whoop',  value: last(recovery, 'recovery_score'), fmt: v => Math.round(v) + '%',         color: v => scoreColor(v, 33, 67) },
+    { label: 'HRV (rMSSD)',      period: 'Last night', source: 'Whoop',  value: last(recovery, 'hrv_rmssd'),      fmt: v => Math.round(v) + ' ms',        color: v => scoreColor(v, 35, GOALS.hrv) },
+    { label: 'Acute Load (ATL)', period: 'Current',    source: 'Garmin', value: last(load, 'acute_load'),         fmt: v => Math.round(v),                 color: () => '#22d3ee' },
+    { label: 'VO2 Max',          period: 'Latest',     source: 'Garmin', value: latestVo2,                        fmt: v => v.toFixed(1) + ' ml/kg/min',   color: v => scoreColor(v, 45, 55) },
+    { label: 'Weekly Readiness', period: 'This week',  source: null,     value: readiness.length ? readiness[readiness.length - 1].readiness : null,       fmt: v => v + '%', color: v => scoreColor(v, 50, 75) },
   ];
   document.getElementById('statCards').innerHTML = cards.map((c, i) => {
     const color = c.color(c.value);
@@ -319,6 +354,50 @@ function renderGarminChart(data) {
     ...PLOTLY_LAYOUT,
     yaxis: { ...PLOTLY_LAYOUT.yaxis, title: 'Battery', range: [0, 100] },
     yaxis2: { overlaying: 'y', side: 'right', gridcolor: 'transparent', range: [0, 100], title: 'Stress', color: '#f43f5e' },
+  }, PLOTLY_CONFIG);
+}
+
+function renderVo2Chart(data) {
+  if (!data.length) {
+    document.getElementById('chartVo2').innerHTML = '<p class="text-xs pt-16 text-center" style="color:#3d5570">No VO2 Max data yet — sync Garmin to populate</p>';
+    return;
+  }
+  const dates = data.map(d => d.date);
+  const vals  = data.map(d => d.vo2max);
+  Plotly.newPlot('chartVo2', [
+    { x: dates, y: vals, name: 'VO2 Max', type: 'scatter', mode: 'lines+markers',
+      line: { color: '#22d3ee', width: 2 }, marker: { size: 5, color: '#22d3ee' },
+      fill: 'tozeroy', fillcolor: 'rgba(34,211,238,0.06)',
+      hovertemplate: '%{x}<br>VO2 Max: %{y:.1f} ml/kg/min<extra></extra>' },
+    { x: dates, y: rollingAvg(vals, 14), name: '14d avg', type: 'scatter', mode: 'lines',
+      line: { color: '#00e5a0', width: 2.5 }, showlegend: false },
+  ], {
+    ...PLOTLY_LAYOUT,
+    yaxis: { ...PLOTLY_LAYOUT.yaxis, title: 'ml/kg/min' },
+  }, PLOTLY_CONFIG);
+}
+
+function renderZonesChart(data) {
+  if (!data.length) {
+    document.getElementById('chartZones').innerHTML = '<p class="text-xs pt-16 text-center" style="color:#3d5570">No HR zone data yet — sync will populate this after your next workout</p>';
+    return;
+  }
+  const dates  = data.map(d => d.week);
+  const zones  = [
+    { key: 'zone1_mins', label: 'Z1 Recovery',  color: '#1e4d6b' },
+    { key: 'zone2_mins', label: 'Z2 Base',       color: '#0ea5e9' },
+    { key: 'zone3_mins', label: 'Z3 Tempo',      color: '#10b981' },
+    { key: 'zone4_mins', label: 'Z4 Threshold',  color: '#f59e0b' },
+    { key: 'zone5_mins', label: 'Z5 Max',        color: '#f43f5e' },
+  ];
+  Plotly.newPlot('chartZones', zones.map(z => ({
+    x: dates, y: data.map(d => d[z.key]),
+    name: z.label, type: 'bar', marker: { color: z.color },
+    hovertemplate: `${z.label}<br>%{y} min<extra></extra>`,
+  })), {
+    ...PLOTLY_LAYOUT,
+    barmode: 'stack',
+    yaxis: { ...PLOTLY_LAYOUT.yaxis, title: 'min' },
   }, PLOTLY_CONFIG);
 }
 

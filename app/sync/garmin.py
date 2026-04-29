@@ -81,6 +81,25 @@ def sync_training_load(db: Session, email: str, password: str):
     db.commit()
 
 
+def _apply_garmin_zones(client, row: Activity, activity_id: str):
+    """Best-effort: populate zone1-5_secs from Garmin activity details."""
+    try:
+        details = client.get_activity_details(activity_id)
+        # Garmin returns zones under various keys depending on API version
+        zones = (
+            details.get("heartRateZones")
+            or details.get("hrTimeInZones")
+            or []
+        )
+        for z in zones:
+            n = z.get("zoneNumber") or z.get("zone") or 0
+            s = int(z.get("secsInZone") or z.get("seconds") or 0)
+            if 1 <= n <= 5:
+                setattr(row, f"zone{n}_secs", s)
+    except Exception:
+        pass
+
+
 def sync_activities(db: Session, email: str, password: str, days: int = 90):
     client = _client(email, password)
     start = date.today() - timedelta(days=days)
@@ -90,6 +109,8 @@ def sync_activities(db: Session, email: str, password: str, days: int = 90):
     except Exception:
         return
 
+    backfill_budget = 30  # max zone backfills per sync to avoid rate limits
+
     for act in raw:
         external_id = str(act.get("activityId", ""))
         if not external_id:
@@ -97,6 +118,9 @@ def sync_activities(db: Session, email: str, password: str, days: int = 90):
 
         existing = db.query(Activity).filter_by(source="garmin", external_id=external_id).first()
         if existing:
+            if existing.avg_hr and existing.zone1_secs is None and backfill_budget > 0:
+                _apply_garmin_zones(client, existing, external_id)
+                backfill_budget -= 1
             continue
 
         act_date_str = (act.get("startTimeLocal") or "")[:10]
@@ -105,7 +129,7 @@ def sync_activities(db: Session, email: str, password: str, days: int = 90):
         except ValueError:
             continue
 
-        db.add(Activity(
+        row = Activity(
             source="garmin",
             external_id=external_id,
             date=act_date,
@@ -116,6 +140,9 @@ def sync_activities(db: Session, email: str, password: str, days: int = 90):
             avg_hr=act.get("averageHR"),
             avg_watts=act.get("avgPower"),
             elevation_gain=act.get("elevationGain"),
-        ))
+        )
+        db.add(row)
+        if act.get("averageHR"):
+            _apply_garmin_zones(client, row, external_id)
 
     db.commit()

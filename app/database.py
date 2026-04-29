@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 import os
@@ -22,3 +22,22 @@ def get_db():
 def init_db():
     from app import models  # noqa: F401 — ensures models are registered
     Base.metadata.create_all(bind=engine)
+    _migrate()
+
+
+def _migrate():
+    """Add columns that didn't exist in earlier schema versions."""
+    new_cols = [
+        ("activities", "zone1_secs", "INTEGER"),
+        ("activities", "zone2_secs", "INTEGER"),
+        ("activities", "zone3_secs", "INTEGER"),
+        ("activities", "zone4_secs", "INTEGER"),
+        ("activities", "zone5_secs", "INTEGER"),
+    ]
+    with engine.connect() as conn:
+        for table, col, typ in new_cols:
+            try:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {typ}"))
+                conn.commit()
+            except Exception:
+                pass  # column already exists

@@ -191,6 +191,51 @@ def api_monthly_summary(month: str, db: Session = Depends(get_db)):
     }
 
 
+@router.get("/api/vo2max")
+def api_vo2max(days: int = 365, db: Session = Depends(get_db)):
+    since = date.today() - timedelta(days=days)
+    rows = (
+        db.query(GarminDaily)
+        .filter(GarminDaily.date >= since, GarminDaily.vo2max.isnot(None))
+        .order_by(GarminDaily.date)
+        .all()
+    )
+    return [{"date": r.date.isoformat(), "vo2max": r.vo2max} for r in rows]
+
+
+@router.get("/api/hr-zones")
+def api_hr_zones(weeks: int = 12, db: Session = Depends(get_db)):
+    since = date.today() - timedelta(weeks=weeks)
+    activities = (
+        db.query(Activity)
+        .filter(Activity.date >= since, Activity.zone1_secs.isnot(None))
+        .order_by(Activity.date)
+        .all()
+    )
+
+    week_buckets: dict = {}
+    for a in activities:
+        d = a.date
+        monday = d - timedelta(days=d.weekday())
+        key = monday.isoformat()
+        if key not in week_buckets:
+            week_buckets[key] = [0, 0, 0, 0, 0]
+        for i in range(5):
+            week_buckets[key][i] += getattr(a, f"zone{i+1}_secs") or 0
+
+    return [
+        {
+            "week": k,
+            "zone1_mins": round(v[0] / 60, 1),
+            "zone2_mins": round(v[1] / 60, 1),
+            "zone3_mins": round(v[2] / 60, 1),
+            "zone4_mins": round(v[3] / 60, 1),
+            "zone5_mins": round(v[4] / 60, 1),
+        }
+        for k, v in sorted(week_buckets.items())
+    ]
+
+
 @router.get("/api/readiness")
 def api_readiness(weeks: int = 12, db: Session = Depends(get_db)):
     today = date.today()

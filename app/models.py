@@ -76,4 +76,9 @@ class Activity(Base):
     avg_hr: Mapped[float] = mapped_column(Float, nullable=True)
     avg_watts: Mapped[float] = mapped_column(Float, nullable=True)
     elevation_gain: Mapped[float] = mapped_column(Float, nullable=True)
-    tss: Mapped[float] = mapped_column(Float, nullable=True)  # training stress score
+    tss: Mapped[float] = mapped_column(Float, nullable=True)
+    zone1_secs: Mapped[int] = mapped_column(Integer, nullable=True)
+    zone2_secs: Mapped[int] = mapped_column(Integer, nullable=True)
+    zone3_secs: Mapped[int] = mapped_column(Integer, nullable=True)
+    zone4_secs: Mapped[int] = mapped_column(Integer, nullable=True)
+    zone5_secs: Mapped[int] = mapped_column(Integer, nullable=True)

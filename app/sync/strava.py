@@ -35,6 +35,21 @@ def _refresh_if_needed(db: Session, token: OAuthToken, client_id: str, client_se
         save_token(db, resp.json())
 
 
+def _apply_strava_zones(row: Activity, activity_id: str, headers: dict):
+    """Fetch Strava HR zones for an activity and populate zone1-5_secs."""
+    try:
+        resp = httpx.get(f"{STRAVA_BASE}/activities/{activity_id}/zones", headers=headers)
+        if resp.status_code != 200:
+            return
+        for block in resp.json():
+            if block.get("type") != "heartrate":
+                continue
+            for i, z in enumerate(block.get("zones", [])[:5], start=1):
+                setattr(row, f"zone{i}_secs", int(z.get("time", 0)))
+    except Exception:
+        pass
+
+
 def sync_activities(db: Session, client_id: str, client_secret: str, days: int = 90):
     token = get_token(db)
     if not token:
@@ -56,10 +71,15 @@ def sync_activities(db: Session, client_id: str, client_secret: str, days: int =
         if not activities:
             break
 
+        backfill_budget = 20
+
         for act in activities:
             external_id = str(act["id"])
             existing = db.query(Activity).filter_by(source="strava", external_id=external_id).first()
             if existing:
+                if existing.avg_hr and existing.zone1_secs is None and backfill_budget > 0:
+                    _apply_strava_zones(existing, external_id, headers)
+                    backfill_budget -= 1
                 continue
 
             act_date = date.fromisoformat(act["start_date_local"][:10])
@@ -77,6 +97,8 @@ def sync_activities(db: Session, client_id: str, client_secret: str, days: int =
                 tss=act.get("suffer_score"),
             )
             db.add(row)
+            if act.get("has_heartrate"):
+                _apply_strava_zones(row, external_id, headers)
 
         db.commit()
         page += 1
