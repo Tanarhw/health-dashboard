@@ -3,84 +3,104 @@
 {% block nav_dashboard %}active{% endblock %}
 
 {% block content %}
-<!-- Stat cards -->
 <div id="statCards" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6"></div>
 
-<!-- Recovery & Load -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
   <div class="card">
     <div class="flex items-center justify-between mb-3">
       <div class="text-sm font-semibold text-gray-300">Recovery & HRV</div>
       <div class="flex items-center gap-3">
         <div class="flex gap-3 text-xs text-gray-500">
-          <span class="flex items-center gap-1"><span style="display:inline-block;width:20px;border-top:1px dotted #48bb78"></span> Goal</span>
-          <span class="flex items-center gap-1"><span style="display:inline-block;width:20px;border-top:2px solid #48bb78;opacity:0.5"></span> 7d avg</span>
+          <span class="flex items-center gap-1"><span style="display:inline-block;width:16px;border-top:1px dotted #48bb78"></span>Goal</span>
+          <span class="flex items-center gap-1"><span style="display:inline-block;width:16px;border-top:2px solid #48bb78;opacity:0.5"></span>7d avg</span>
         </div>
-        <div class="flex rounded overflow-hidden border border-gray-700 text-xs">
-          <button onclick="setRecoveryDays(30)" id="recBtn30" class="range-btn px-2 py-1 text-gray-400 hover:text-white hover:bg-gray-700 transition">30d</button>
-          <button onclick="setRecoveryDays(60)" id="recBtn60" class="range-btn px-2 py-1 bg-gray-700 text-white">60d</button>
-          <button onclick="setRecoveryDays(90)" id="recBtn90" class="range-btn px-2 py-1 text-gray-400 hover:text-white hover:bg-gray-700 transition">90d</button>
-        </div>
+        <div id="toggleRecovery"></div>
       </div>
     </div>
     <div id="chartRecovery" style="height:220px"></div>
   </div>
   <div class="card">
     <div class="flex items-center justify-between mb-3">
-      <div class="text-sm font-semibold text-gray-300">Training Load <span class="text-gray-500 font-normal text-xs">— 16 weeks</span></div>
-      <div class="flex gap-2 text-xs">
-        <span class="tag tag-green">Optimal 0.8–1.3</span>
-        <span class="tag tag-yellow">Caution 1.3–1.5</span>
-        <span class="tag tag-red">Risk &gt;1.5</span>
+      <div class="text-sm font-semibold text-gray-300">Training Load</div>
+      <div class="flex items-center gap-3">
+        <div class="flex gap-2 text-xs">
+          <span class="tag tag-green">Optimal 0.8–1.3</span>
+          <span class="tag tag-yellow">Caution 1.3–1.5</span>
+          <span class="tag tag-red">Risk &gt;1.5</span>
+        </div>
+        <div id="toggleLoad"></div>
       </div>
     </div>
     <div id="chartLoad" style="height:220px"></div>
   </div>
 </div>
 
-<!-- Sleep & Volume -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
   <div class="card">
     <div class="flex items-center justify-between mb-3">
       <div class="text-sm font-semibold text-gray-300">Sleep</div>
-      <div class="flex rounded overflow-hidden border border-gray-700 text-xs">
-        <button onclick="setSleepDays(30)" id="slpBtn30" class="range-btn px-2 py-1 text-gray-400 hover:text-white hover:bg-gray-700 transition">30d</button>
-        <button onclick="setSleepDays(60)" id="slpBtn60" class="range-btn px-2 py-1 bg-gray-700 text-white">60d</button>
-        <button onclick="setSleepDays(90)" id="slpBtn90" class="range-btn px-2 py-1 text-gray-400 hover:text-white hover:bg-gray-700 transition">90d</button>
-      </div>
+      <div id="toggleSleep"></div>
     </div>
     <div id="chartSleep" style="height:220px"></div>
   </div>
   <div class="card">
-    <div class="text-sm font-semibold text-gray-300 mb-3">Weekly Volume <span class="text-gray-500 font-normal text-xs">— 12 weeks</span></div>
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-sm font-semibold text-gray-300">Weekly Volume</div>
+      <div id="toggleVolume"></div>
+    </div>
     <div id="chartVolume" style="height:220px"></div>
   </div>
 </div>
 
-<!-- Readiness & Strain vs Recovery -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
   <div class="card">
-    <div class="text-sm font-semibold text-gray-300 mb-3">Weekly Readiness Score <span class="text-gray-500 font-normal text-xs">— 12 weeks</span></div>
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-sm font-semibold text-gray-300">Weekly Readiness Score</div>
+      <div id="toggleReadiness"></div>
+    </div>
     <div id="chartReadiness" style="height:220px"></div>
   </div>
   <div class="card">
-    <div class="text-sm font-semibold text-gray-300 mb-1">Strain vs Next-Day Recovery</div>
-    <div class="text-xs text-gray-500 mb-3">Each dot is one day — colored by recovery score</div>
-    <div id="chartStrainRecovery" style="height:220px"></div>
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-sm font-semibold text-gray-300">Strain vs Next-Day Recovery</div>
+      <div id="toggleStrain"></div>
+    </div>
+    <div class="text-xs text-gray-500 mb-2">Each dot is one day — colored by recovery score</div>
+    <div id="chartStrainRecovery" style="height:200px"></div>
   </div>
 </div>
 
-<!-- Body Battery -->
 <div class="card mb-4">
-  <div class="text-sm font-semibold text-gray-300 mb-3">Body Battery & Stress <span class="text-gray-500 font-normal text-xs">— 60 days</span></div>
+  <div class="flex items-center justify-between mb-3">
+    <div class="text-sm font-semibold text-gray-300">Body Battery & Stress</div>
+    <div id="toggleGarmin"></div>
+  </div>
   <div id="chartGarmin" style="height:180px"></div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-// --- Configurable goals ---
 const GOALS = { recovery: 67, hrv: 50, sleep_hours: 7.5, sleep_efficiency: 85 };
+
+// --- Generic toggle builder ---
+function makeToggle(containerId, options, defaultVal, onChange) {
+  const el = document.getElementById(containerId);
+  el.className = 'flex rounded overflow-hidden border border-gray-700 text-xs';
+  el.innerHTML = options.map(({ label, value }) => `
+    <button data-value="${value}"
+      class="toggle-btn px-2 py-1 transition ${value === defaultVal ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'}"
+      onclick="handleToggle('${containerId}', ${value}, this, ${onChange.name || `(${onChange.toString()})`})">
+      ${label}
+    </button>`).join('');
+}
+
+function handleToggle(containerId, value, btn, onChange) {
+  document.querySelectorAll(`#${containerId} .toggle-btn`).forEach(b => {
+    b.className = `toggle-btn px-2 py-1 transition ${b === btn ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`;
+  });
+  onChange(value);
+}
 
 // --- Helpers ---
 function last(arr, key) {
@@ -120,6 +140,19 @@ async function loadDashboard() {
   ]);
 
   renderStatCards(recovery, load, garmin, readiness);
+
+  const DAYS = [{ label: '30d', value: 30 }, { label: '60d', value: 60 }, { label: '90d', value: 90 }];
+  const WEEKS = [{ label: '8w', value: 8 }, { label: '16w', value: 16 }, { label: '24w', value: 24 }];
+  const WKSM = [{ label: '4w', value: 4 }, { label: '8w', value: 8 }, { label: '12w', value: 12 }];
+
+  makeToggle('toggleRecovery', DAYS, 60, async d => renderRecoveryChart(await fetch(`/api/recovery?days=${d}`).then(r => r.json())));
+  makeToggle('toggleLoad',     WEEKS, 16, async w => renderLoadChart(await fetch(`/api/training-load?weeks=${w}`).then(r => r.json())));
+  makeToggle('toggleSleep',    DAYS, 60, async d => renderSleepChart(await fetch(`/api/sleep?days=${d}`).then(r => r.json())));
+  makeToggle('toggleVolume',   WKSM, 12, async w => renderVolumeChart(await fetch(`/api/activities?weeks=${w}`).then(r => r.json())));
+  makeToggle('toggleReadiness',WKSM, 12, async w => renderReadinessChart(await fetch(`/api/readiness?weeks=${w}`).then(r => r.json())));
+  makeToggle('toggleStrain',   DAYS, 60, async d => renderStrainRecovery(await fetch(`/api/recovery?days=${d}`).then(r => r.json())));
+  makeToggle('toggleGarmin',   DAYS, 60, async d => renderGarminChart(await fetch(`/api/garmin-daily?days=${d}`).then(r => r.json())));
+
   renderRecoveryChart(recovery);
   renderLoadChart(load);
   renderSleepChart(sleep);
@@ -131,34 +164,25 @@ async function loadDashboard() {
 
 // --- Stat cards ---
 function renderStatCards(recovery, load, garmin, readiness) {
-  const latestRecovery = last(recovery, 'recovery_score');
-  const latestHrv = last(recovery, 'hrv_rmssd');
-  const latestLoad = last(load, 'acute_load');
-  const latestBattery = last(garmin, 'body_battery_end');
-  const currentReadiness = readiness.length ? readiness[readiness.length - 1].readiness : null;
-
   const cards = [
-    { label: 'Recovery Score', value: latestRecovery != null ? Math.round(latestRecovery) + '%' : '—', color: scoreColor(latestRecovery, 33, 67) },
-    { label: 'HRV (rMSSD)', value: latestHrv != null ? Math.round(latestHrv) + ' ms' : '—', color: scoreColor(latestHrv, 35, GOALS.hrv) },
-    { label: 'Acute Load (ATL)', value: latestLoad != null ? Math.round(latestLoad) : '—', color: '#b794f4' },
-    { label: 'Body Battery', value: latestBattery != null ? Math.round(latestBattery) : '—', color: scoreColor(latestBattery, 25, 50) },
-    { label: 'Weekly Readiness', value: currentReadiness != null ? currentReadiness + '%' : '—', color: scoreColor(currentReadiness, 50, 75) },
+    { label: 'Recovery Score', value: last(recovery, 'recovery_score'), fmt: v => Math.round(v) + '%', color: v => scoreColor(v, 33, 67) },
+    { label: 'HRV (rMSSD)',    value: last(recovery, 'hrv_rmssd'),      fmt: v => Math.round(v) + ' ms', color: v => scoreColor(v, 35, GOALS.hrv) },
+    { label: 'Acute Load (ATL)',value: last(load, 'acute_load'),         fmt: v => Math.round(v), color: () => '#b794f4' },
+    { label: 'Body Battery',   value: last(garmin, 'body_battery_end'),  fmt: v => Math.round(v), color: v => scoreColor(v, 25, 50) },
+    { label: 'Weekly Readiness',value: readiness.length ? readiness[readiness.length - 1].readiness : null, fmt: v => v + '%', color: v => scoreColor(v, 50, 75) },
   ];
-
   document.getElementById('statCards').innerHTML = cards.map(c => `
     <div class="card">
-      <div class="stat-value" style="color:${c.color}">${c.value}</div>
+      <div class="stat-value" style="color:${c.color(c.value)}">${c.value != null ? c.fmt(c.value) : '—'}</div>
       <div class="stat-label">${c.label}</div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
-// --- Recovery & HRV with goal lines + rolling averages ---
+// --- Charts ---
 function renderRecoveryChart(data) {
   const dates = data.map(d => d.date);
   const recVals = data.map(d => d.recovery_score);
   const hrvVals = data.map(d => d.hrv_rmssd);
-
   Plotly.newPlot('chartRecovery', [
     { x: dates, y: recVals, name: 'Recovery %', type: 'scatter', mode: 'lines', line: { color: '#48bb78', width: 1.5 }, fill: 'tozeroy', fillcolor: 'rgba(72,187,120,0.08)' },
     { x: dates, y: rollingAvg(recVals), name: '7d avg', type: 'scatter', mode: 'lines', line: { color: '#48bb78', width: 2.5 }, opacity: 0.6, showlegend: false },
@@ -168,10 +192,7 @@ function renderRecoveryChart(data) {
     ...PLOTLY_LAYOUT,
     yaxis: { ...PLOTLY_LAYOUT.yaxis, title: 'Recovery %', range: [0, 105] },
     yaxis2: { overlaying: 'y', side: 'right', gridcolor: 'transparent', title: 'HRV ms', color: '#63b3ed' },
-    shapes: [
-      goalLine('y', GOALS.recovery, '#48bb78'),
-      goalLine('y2', GOALS.hrv, '#63b3ed'),
-    ],
+    shapes: [goalLine('y', GOALS.recovery, '#48bb78'), goalLine('y2', GOALS.hrv, '#63b3ed')],
     annotations: [
       { xref: 'paper', x: 0.01, yref: 'y', y: GOALS.recovery + 3, text: `Goal ${GOALS.recovery}%`, showarrow: false, font: { color: '#48bb78', size: 9 }, xanchor: 'left' },
       { xref: 'paper', x: 0.01, yref: 'y2', y: GOALS.hrv + 2, text: `Goal ${GOALS.hrv}ms`, showarrow: false, font: { color: '#63b3ed', size: 9 }, xanchor: 'left' },
@@ -179,28 +200,24 @@ function renderRecoveryChart(data) {
   }, PLOTLY_CONFIG);
 }
 
-// --- Training load with zones + ratio ---
 function renderLoadChart(data) {
   const dates = data.map(d => d.date);
-  const ratios = data.map(d => d.load_ratio);
-
   Plotly.newPlot('chartLoad', [
     { x: dates, y: data.map(d => d.acute_load), name: 'Acute (ATL)', type: 'scatter', mode: 'lines', line: { color: '#fc8181', width: 2 } },
     { x: dates, y: data.map(d => d.chronic_load), name: 'Chronic (CTL)', type: 'scatter', mode: 'lines', line: { color: '#b794f4', width: 2 } },
-    { x: dates, y: ratios, name: 'ATL/CTL Ratio', type: 'scatter', mode: 'lines', line: { color: '#f6ad55', width: 1.5, dash: 'dot' }, yaxis: 'y2' },
+    { x: dates, y: data.map(d => d.load_ratio), name: 'ATL/CTL Ratio', type: 'scatter', mode: 'lines', line: { color: '#f6ad55', width: 1.5, dash: 'dot' }, yaxis: 'y2' },
   ], {
     ...PLOTLY_LAYOUT,
     yaxis: { ...PLOTLY_LAYOUT.yaxis, title: 'Load' },
     yaxis2: { overlaying: 'y', side: 'right', gridcolor: 'transparent', title: 'Ratio', color: '#f6ad55', range: [0, 2.2] },
     shapes: [
-      { type: 'rect', xref: 'paper', x0: 0, x1: 1, yref: 'y2', y0: 0.8, y1: 1.3, fillcolor: 'rgba(72,187,120,0.07)', line: { width: 0 } },
-      { type: 'rect', xref: 'paper', x0: 0, x1: 1, yref: 'y2', y0: 1.3, y1: 1.5, fillcolor: 'rgba(236,201,75,0.09)', line: { width: 0 } },
-      { type: 'rect', xref: 'paper', x0: 0, x1: 1, yref: 'y2', y0: 1.5, y1: 2.2, fillcolor: 'rgba(252,129,129,0.09)', line: { width: 0 } },
+      { type: 'rect', xref: 'paper', x0: 0, x1: 1, yref: 'y2', y0: 0.8,  y1: 1.3, fillcolor: 'rgba(72,187,120,0.07)', line: { width: 0 } },
+      { type: 'rect', xref: 'paper', x0: 0, x1: 1, yref: 'y2', y0: 1.3,  y1: 1.5, fillcolor: 'rgba(236,201,75,0.09)', line: { width: 0 } },
+      { type: 'rect', xref: 'paper', x0: 0, x1: 1, yref: 'y2', y0: 1.5,  y1: 2.2, fillcolor: 'rgba(252,129,129,0.09)', line: { width: 0 } },
     ],
   }, PLOTLY_CONFIG);
 }
 
-// --- Sleep with goal line ---
 function renderSleepChart(data) {
   Plotly.newPlot('chartSleep', [
     { x: data.map(d => d.date), y: data.map(d => d.total_sleep_hours), name: 'Hours', type: 'bar', marker: { color: '#4299e1' } },
@@ -215,37 +232,31 @@ function renderSleepChart(data) {
   }, PLOTLY_CONFIG);
 }
 
-// --- Weekly volume ---
 function renderVolumeChart(activities) {
   const weeks = {};
   activities.forEach(a => {
     const d = new Date(a.date);
-    const monday = new Date(d);
-    monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-    const key = monday.toISOString().slice(0, 10);
+    const mon = new Date(d);
+    mon.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    const key = mon.toISOString().slice(0, 10);
     if (!weeks[key]) weeks[key] = {};
     const sport = a.sport_type || 'other';
     weeks[key][sport] = (weeks[key][sport] || 0) + (a.distance_miles || 0);
   });
-
   const dates = Object.keys(weeks).sort();
   const sports = [...new Set(activities.map(a => a.sport_type || 'other'))];
   const colors = ['#b794f4', '#63b3ed', '#48bb78', '#f6ad55', '#fc8181'];
-
   Plotly.newPlot('chartVolume', sports.map((sport, i) => ({
     x: dates, y: dates.map(d => weeks[d][sport] || 0),
     name: sport, type: 'bar', marker: { color: colors[i % colors.length] },
   })), { ...PLOTLY_LAYOUT, barmode: 'stack', yaxis: { ...PLOTLY_LAYOUT.yaxis, title: 'mi' } }, PLOTLY_CONFIG);
 }
 
-// --- Weekly readiness ---
 function renderReadinessChart(data) {
   const colors = data.map(d => !d.readiness ? '#4a5568' : d.readiness >= 75 ? '#48bb78' : d.readiness >= 50 ? '#f6ad55' : '#fc8181');
   Plotly.newPlot('chartReadiness', [{
-    x: data.map(d => d.week),
-    y: data.map(d => d.readiness),
-    type: 'bar',
-    marker: { color: colors },
+    x: data.map(d => d.week), y: data.map(d => d.readiness),
+    type: 'bar', marker: { color: colors },
     hovertemplate: 'Week of %{x}<br>Readiness: %{y}%<extra></extra>',
   }], {
     ...PLOTLY_LAYOUT,
@@ -258,29 +269,17 @@ function renderReadinessChart(data) {
   }, PLOTLY_CONFIG);
 }
 
-// --- Strain vs next-day recovery scatter ---
 function renderStrainRecovery(recovery) {
   const pairs = [];
   for (let i = 0; i < recovery.length - 1; i++) {
-    const today = recovery[i], tomorrow = recovery[i + 1];
-    if (today.strain != null && tomorrow.recovery_score != null) {
-      pairs.push({ x: today.strain, y: tomorrow.recovery_score, date: today.date });
-    }
+    if (recovery[i].strain != null && recovery[i + 1].recovery_score != null)
+      pairs.push({ x: recovery[i].strain, y: recovery[i + 1].recovery_score, date: recovery[i].date });
   }
   if (!pairs.length) { document.getElementById('chartStrainRecovery').innerHTML = '<p class="text-gray-500 text-sm pt-16 text-center">Not enough data yet</p>'; return; }
-
   Plotly.newPlot('chartStrainRecovery', [{
-    x: pairs.map(p => p.x),
-    y: pairs.map(p => p.y),
-    mode: 'markers',
-    type: 'scatter',
-    marker: {
-      size: 7,
-      color: pairs.map(p => p.y),
-      colorscale: [[0, '#fc8181'], [0.33, '#ecc94b'], [1, '#48bb78']],
-      cmin: 0, cmax: 100,
-      opacity: 0.8,
-    },
+    x: pairs.map(p => p.x), y: pairs.map(p => p.y),
+    mode: 'markers', type: 'scatter',
+    marker: { size: 7, color: pairs.map(p => p.y), colorscale: [[0, '#fc8181'], [0.33, '#ecc94b'], [1, '#48bb78']], cmin: 0, cmax: 100, opacity: 0.8 },
     text: pairs.map(p => p.date),
     hovertemplate: '%{text}<br>Strain: %{x:.1f}<br>Next-day Recovery: %{y:.0f}%<extra></extra>',
   }], {
@@ -291,7 +290,6 @@ function renderStrainRecovery(recovery) {
   }, PLOTLY_CONFIG);
 }
 
-// --- Body Battery & Stress ---
 function renderGarminChart(data) {
   const dates = data.map(d => d.date);
   Plotly.newPlot('chartGarmin', [
@@ -302,27 +300,6 @@ function renderGarminChart(data) {
     yaxis: { ...PLOTLY_LAYOUT.yaxis, title: 'Battery', range: [0, 100] },
     yaxis2: { overlaying: 'y', side: 'right', gridcolor: 'transparent', range: [0, 100], title: 'Stress', color: '#fc8181' },
   }, PLOTLY_CONFIG);
-}
-
-function setActiveBtn(group, days) {
-  [30, 60, 90].forEach(d => {
-    const btn = document.getElementById(`${group}Btn${d}`);
-    if (btn) {
-      btn.className = `range-btn px-2 py-1 transition text-xs ${d === days ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`;
-    }
-  });
-}
-
-async function setRecoveryDays(days) {
-  setActiveBtn('rec', days);
-  const data = await fetch(`/api/recovery?days=${days}`).then(r => r.json());
-  renderRecoveryChart(data);
-}
-
-async function setSleepDays(days) {
-  setActiveBtn('slp', days);
-  const data = await fetch(`/api/sleep?days=${days}`).then(r => r.json());
-  renderSleepChart(data);
 }
 
 loadDashboard();
