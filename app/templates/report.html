@@ -38,6 +38,8 @@
 {% block scripts %}
 <script>
 const MONTH = '{{ month }}';
+const SPORT_ALIASES = { 'workout': 'Jiu Jitsu' };
+function displaySport(s) { return (s && SPORT_ALIASES[s.toLowerCase()]) || s || 'other'; }
 
 async function loadReport() {
   const [summary, recovery, activities] = await Promise.all([
@@ -75,7 +77,7 @@ function renderSportBreakdown(bySport) {
   const sports = Object.entries(bySport);
   if (!sports.length) { document.getElementById('chartSportBreakdown').innerHTML = '<p class="text-gray-500 text-sm pt-8 text-center">No activities this month</p>'; return; }
   Plotly.newPlot('chartSportBreakdown', [{
-    labels: sports.map(([s]) => s),
+    labels: sports.map(([s]) => displaySport(s)),
     values: sports.map(([, v]) => v.duration_hours),
     type: 'pie',
     hole: 0.45,
@@ -101,7 +103,7 @@ function renderActivityList(activities) {
     <div class="flex items-center justify-between py-1.5 border-b border-gray-800">
       <div class="flex items-center gap-3">
         <span class="text-gray-500 w-20">${a.date}</span>
-        <span class="text-gray-300">${a.name || a.sport_type || 'Activity'}</span>
+        <span class="text-gray-300">${displaySport(a.name) || displaySport(a.sport_type) || 'Activity'}</span>
       </div>
       <div class="flex gap-4 text-gray-400 text-xs">
         ${a.distance_miles ? `<span>${a.distance_miles} mi</span>` : ''}

@@ -10,6 +10,12 @@
     <div class="flex items-center justify-between mb-3">
       <div class="text-sm font-semibold text-gray-300">Recovery & HRV</div>
       <div class="flex items-center gap-3">
+        <div class="flex gap-1">
+          <button id="btnRecoveryLine" onclick="toggleTrace('chartRecovery', [0,1], this)"
+            class="text-xs px-2 py-0.5 rounded border transition" style="color:#48bb78;border-color:#48bb78">Recovery</button>
+          <button id="btnHrvLine" onclick="toggleTrace('chartRecovery', [2,3], this)"
+            class="text-xs px-2 py-0.5 rounded border transition" style="color:#63b3ed;border-color:#63b3ed">HRV</button>
+        </div>
         <div class="flex gap-3 text-xs text-gray-500">
           <span class="flex items-center gap-1"><span style="display:inline-block;width:16px;border-top:1px dotted #48bb78"></span>Goal</span>
           <span class="flex items-center gap-1"><span style="display:inline-block;width:16px;border-top:2px solid #48bb78;opacity:0.5"></span>7d avg</span>
@@ -82,6 +88,8 @@
 {% block scripts %}
 <script>
 const GOALS = { recovery: 67, hrv: 50, sleep_hours: 7.5, sleep_efficiency: 85 };
+const SPORT_ALIASES = { 'workout': 'Jiu Jitsu' };
+function displaySport(s) { return (s && SPORT_ALIASES[s.toLowerCase()]) || s || 'other'; }
 
 // --- Generic toggle builder ---
 function makeToggle(containerId, options, defaultVal, onChange) {
@@ -100,6 +108,13 @@ function handleToggle(containerId, value, btn, onChange) {
     b.className = `toggle-btn px-2 py-1 transition ${b === btn ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`;
   });
   onChange(value);
+}
+
+function toggleTrace(chartId, traceIndices, btn) {
+  const gd = document.getElementById(chartId);
+  const isVisible = gd.data[traceIndices[0]].visible !== false;
+  Plotly.restyle(chartId, { visible: !isVisible }, traceIndices);
+  btn.style.opacity = isVisible ? '0.3' : '1';
 }
 
 // --- Helpers ---
@@ -240,11 +255,11 @@ function renderVolumeChart(activities) {
     mon.setDate(d.getDate() - ((d.getDay() + 6) % 7));
     const key = mon.toISOString().slice(0, 10);
     if (!weeks[key]) weeks[key] = {};
-    const sport = a.sport_type || 'other';
+    const sport = displaySport(a.sport_type || 'other');
     weeks[key][sport] = (weeks[key][sport] || 0) + (a.distance_miles || 0);
   });
   const dates = Object.keys(weeks).sort();
-  const sports = [...new Set(activities.map(a => a.sport_type || 'other'))];
+  const sports = [...new Set(activities.map(a => displaySport(a.sport_type || 'other')))];
   const colors = ['#b794f4', '#63b3ed', '#48bb78', '#f6ad55', '#fc8181'];
   Plotly.newPlot('chartVolume', sports.map((sport, i) => ({
     x: dates, y: dates.map(d => weeks[d][sport] || 0),
