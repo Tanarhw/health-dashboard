@@ -5,7 +5,7 @@
 {% block content %}
 <div id="statCards" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6"></div>
 
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4 fade-up delay-4">
   <div class="card">
     <div class="flex items-center justify-between mb-3">
       <div class="text-sm font-semibold text-gray-300">Recovery & HRV</div>
@@ -184,11 +184,14 @@ function renderStatCards(recovery, load, garmin, readiness) {
     { label: 'Body Battery',   value: last(garmin, 'body_battery_end'),  fmt: v => Math.round(v), color: v => scoreColor(v, 25, 50) },
     { label: 'Weekly Readiness',value: readiness.length ? readiness[readiness.length - 1].readiness : null, fmt: v => v + '%', color: v => scoreColor(v, 50, 75) },
   ];
-  document.getElementById('statCards').innerHTML = cards.map(c => `
-    <div class="card">
-      <div class="stat-value" style="color:${c.color(c.value)}">${c.value != null ? c.fmt(c.value) : '—'}</div>
+  document.getElementById('statCards').innerHTML = cards.map((c, i) => {
+    const color = c.color(c.value);
+    return `
+    <div class="card stat-card fade-up delay-${i + 1}" style="border-top:2px solid ${color}20;box-shadow:0 -1px 0 0 ${color}40 inset">
+      <div class="stat-value" style="color:${color}">${c.value != null ? c.fmt(c.value) : '—'}</div>
       <div class="stat-label">${c.label}</div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 // --- Charts ---
