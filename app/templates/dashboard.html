@@ -178,16 +178,20 @@ async function loadDashboard() {
 // --- Stat cards ---
 function renderStatCards(recovery, load, garmin, readiness) {
   const cards = [
-    { label: 'Recovery Score', value: last(recovery, 'recovery_score'), fmt: v => Math.round(v) + '%', color: v => scoreColor(v, 33, 67) },
-    { label: 'HRV (rMSSD)',    value: last(recovery, 'hrv_rmssd'),      fmt: v => Math.round(v) + ' ms', color: v => scoreColor(v, 35, GOALS.hrv) },
-    { label: 'Acute Load (ATL)',value: last(load, 'acute_load'),         fmt: v => Math.round(v), color: () => '#b794f4' },
-    { label: 'Body Battery',   value: last(garmin, 'body_battery_end'),  fmt: v => Math.round(v), color: v => scoreColor(v, 25, 50) },
-    { label: 'Weekly Readiness',value: readiness.length ? readiness[readiness.length - 1].readiness : null, fmt: v => v + '%', color: v => scoreColor(v, 50, 75) },
+    { label: 'Recovery Score',   period: 'Today',     source: 'Whoop',  value: last(recovery, 'recovery_score'), fmt: v => Math.round(v) + '%',  color: v => scoreColor(v, 33, 67) },
+    { label: 'HRV (rMSSD)',      period: 'Last night', source: 'Whoop',  value: last(recovery, 'hrv_rmssd'),      fmt: v => Math.round(v) + ' ms', color: v => scoreColor(v, 35, GOALS.hrv) },
+    { label: 'Acute Load (ATL)', period: 'Current',   source: 'Garmin', value: last(load, 'acute_load'),          fmt: v => Math.round(v),         color: () => '#a78bfa' },
+    { label: 'Body Battery',     period: 'Today',     source: 'Garmin', value: last(garmin, 'body_battery_end'),  fmt: v => Math.round(v),         color: v => scoreColor(v, 25, 50) },
+    { label: 'Weekly Readiness', period: 'This week', source: null,     value: readiness.length ? readiness[readiness.length - 1].readiness : null, fmt: v => v + '%', color: v => scoreColor(v, 50, 75) },
   ];
   document.getElementById('statCards').innerHTML = cards.map((c, i) => {
     const color = c.color(c.value);
     return `
-    <div class="card stat-card fade-up delay-${i + 1}" style="border-top:2px solid ${color}20;box-shadow:0 -1px 0 0 ${color}40 inset">
+    <div class="card stat-card fade-up delay-${i + 1}" style="border-top:2px solid ${color}30">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:0.9rem">
+        <span style="font-size:0.62rem;font-weight:600;letter-spacing:0.06em;color:${color};background:${color}14;border:1px solid ${color}28;border-radius:5px;padding:2px 7px">${c.period}</span>
+        ${c.source ? `<span style="font-size:0.6rem;font-weight:500;color:#475569;letter-spacing:0.04em">${c.source}</span>` : ''}
+      </div>
       <div class="stat-value" style="color:${color}">${c.value != null ? c.fmt(c.value) : '—'}</div>
       <div class="stat-label">${c.label}</div>
     </div>`;
