@@ -128,7 +128,6 @@ function renderSleepChart(data) {
 }
 
 function renderVolumeChart(activities) {
-  // Aggregate weekly distance by sport
   const weeks = {};
   activities.forEach(a => {
     const d = new Date(a.date);
@@ -137,7 +136,7 @@ function renderVolumeChart(activities) {
     const key = monday.toISOString().slice(0, 10);
     if (!weeks[key]) weeks[key] = {};
     const sport = a.sport_type || 'other';
-    weeks[key][sport] = (weeks[key][sport] || 0) + (a.distance_km || 0);
+    weeks[key][sport] = (weeks[key][sport] || 0) + (a.distance_miles || 0);
   });
 
   const dates = Object.keys(weeks).sort();
@@ -155,7 +154,7 @@ function renderVolumeChart(activities) {
   Plotly.newPlot('chartVolume', traces, {
     ...PLOTLY_LAYOUT,
     barmode: 'stack',
-    yaxis: { ...PLOTLY_LAYOUT.yaxis, title: 'km' },
+    yaxis: { ...PLOTLY_LAYOUT.yaxis, title: 'mi' },
   }, PLOTLY_CONFIG);
 }
 

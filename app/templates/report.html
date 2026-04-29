@@ -61,7 +61,7 @@ function renderSummaryCards(s) {
     { label: 'Avg Recovery', value: r.avg_recovery_score != null ? Math.round(r.avg_recovery_score) + '%' : '—', color: '#48bb78' },
     { label: 'Avg HRV', value: r.avg_hrv != null ? Math.round(r.avg_hrv) + ' ms' : '—', color: '#63b3ed' },
     { label: 'Total Training', value: t.total_duration_hours + ' hrs', color: '#b794f4' },
-    { label: 'Total Distance', value: t.total_distance_km + ' km', color: '#f6ad55' },
+    { label: 'Total Distance', value: t.total_distance_miles + ' mi', color: '#f6ad55' },
   ];
   document.getElementById('summaryCards').innerHTML = cards.map(c => `
     <div class="card">
@@ -104,7 +104,7 @@ function renderActivityList(activities) {
         <span class="text-gray-300">${a.name || a.sport_type || 'Activity'}</span>
       </div>
       <div class="flex gap-4 text-gray-400 text-xs">
-        ${a.distance_km ? `<span>${a.distance_km} km</span>` : ''}
+        ${a.distance_miles ? `<span>${a.distance_miles} mi</span>` : ''}
         ${a.duration_minutes ? `<span>${a.duration_minutes} min</span>` : ''}
         ${a.avg_hr ? `<span>${Math.round(a.avg_hr)} bpm</span>` : ''}
       </div>

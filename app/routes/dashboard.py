@@ -114,10 +114,10 @@ def api_activities(weeks: int = 12, db: Session = Depends(get_db)):
             "sport_type": r.sport_type,
             "name": r.name,
             "duration_minutes": round(r.duration_seconds / 60, 1) if r.duration_seconds else None,
-            "distance_km": round(r.distance_meters / 1000, 2) if r.distance_meters else None,
+            "distance_miles": round(r.distance_meters / 1609.344, 2) if r.distance_meters else None,
             "avg_hr": r.avg_hr,
             "avg_watts": r.avg_watts,
-            "elevation_gain": r.elevation_gain,
+            "elevation_ft": round(r.elevation_gain * 3.28084) if r.elevation_gain else None,
             "tss": r.tss,
         }
         for r in rows
@@ -181,8 +181,8 @@ def api_monthly_summary(month: str, db: Session = Depends(get_db)):
             "total_duration_hours": round(
                 sum(a.duration_seconds or 0 for a in activities) / 3600, 1
             ),
-            "total_distance_km": round(
-                sum(a.distance_meters or 0 for a in activities) / 1000, 1
+            "total_distance_miles": round(
+                sum(a.distance_meters or 0 for a in activities) / 1609.344, 1
             ),
             "avg_acute_load": safe_avg([r.acute_load for r in training_rows]),
             "avg_chronic_load": safe_avg([r.chronic_load for r in training_rows]),
@@ -196,8 +196,8 @@ def _group_by_sport(activities: list) -> dict:
     for a in activities:
         sport = a.sport_type or "unknown"
         if sport not in result:
-            result[sport] = {"count": 0, "distance_km": 0, "duration_hours": 0}
+            result[sport] = {"count": 0, "distance_miles": 0, "duration_hours": 0}
         result[sport]["count"] += 1
-        result[sport]["distance_km"] += round((a.distance_meters or 0) / 1000, 2)
+        result[sport]["distance_miles"] += round((a.distance_meters or 0) / 1609.344, 2)
         result[sport]["duration_hours"] += round((a.duration_seconds or 0) / 3600, 2)
     return result
