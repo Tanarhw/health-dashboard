@@ -31,7 +31,7 @@ class WhoopSleep(Base):
     __tablename__ = "whoop_sleep"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    sleep_id: Mapped[int] = mapped_column(Integer, unique=True)
+    sleep_id: Mapped[str] = mapped_column(String, unique=True)
     date: Mapped[date] = mapped_column(Date, index=True)
     total_sleep_hours: Mapped[float] = mapped_column(Float, nullable=True)
     sleep_efficiency: Mapped[float] = mapped_column(Float, nullable=True)

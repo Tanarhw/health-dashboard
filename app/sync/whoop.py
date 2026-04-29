@@ -3,7 +3,7 @@ import httpx
 from sqlalchemy.orm import Session
 from app.models import OAuthToken, WhoopRecovery, WhoopSleep
 
-WHOOP_BASE = "https://api.prod.whoop.com/developer/v1"
+WHOOP_BASE = "https://api.prod.whoop.com/developer/v2"
 TOKEN_URL = "https://api.prod.whoop.com/oauth/oauth2/token"
 
 
@@ -34,6 +34,51 @@ def _refresh_if_needed(db: Session, token: OAuthToken, client_id: str, client_se
         save_token(db, resp.json())
 
 
+def _headers(token: OAuthToken) -> dict:
+    return {"Authorization": f"Bearer {token.access_token}"}
+
+
+def _paginate(url: str, headers: dict, start: str):
+    next_token = None
+    while True:
+        params = {"start": start, "limit": 25}
+        if next_token:
+            params["nextToken"] = next_token
+        resp = httpx.get(url, headers=headers, params=params)
+        resp.raise_for_status()
+        body = resp.json()
+        yield from body.get("records", [])
+        next_token = body.get("next_token")
+        if not next_token:
+            break
+
+
+def sync_cycles(db: Session, client_id: str, client_secret: str, days: int = 90):
+    token = get_token(db)
+    if not token:
+        raise RuntimeError("Whoop not connected — visit /auth/whoop")
+    _refresh_if_needed(db, token, client_id, client_secret)
+
+    start = (date.today() - timedelta(days=days)).isoformat() + "T00:00:00.000Z"
+
+    for cycle in _paginate(f"{WHOOP_BASE}/cycle", _headers(token), start):
+        cycle_id = cycle["id"]
+        cycle_date = date.fromisoformat(cycle["start"][:10])
+        score = cycle.get("score") or {}
+
+        existing = db.query(WhoopRecovery).filter_by(cycle_id=cycle_id).first()
+        if existing:
+            existing.strain = score.get("strain")
+        else:
+            db.add(WhoopRecovery(
+                cycle_id=cycle_id,
+                date=cycle_date,
+                strain=score.get("strain"),
+            ))
+
+    db.commit()
+
+
 def sync_recovery(db: Session, client_id: str, client_secret: str, days: int = 90):
     token = get_token(db)
     if not token:
@@ -41,39 +86,19 @@ def sync_recovery(db: Session, client_id: str, client_secret: str, days: int = 9
     _refresh_if_needed(db, token, client_id, client_secret)
 
     start = (date.today() - timedelta(days=days)).isoformat() + "T00:00:00.000Z"
-    headers = {"Authorization": f"Bearer {token.access_token}"}
-    next_token = None
 
-    while True:
-        params = {"start": start, "limit": 25}
-        if next_token:
-            params["nextToken"] = next_token
+    for rec in _paginate(f"{WHOOP_BASE}/recovery", _headers(token), start):
+        cycle_id = rec["cycle_id"]
+        score = rec.get("score") or {}
 
-        resp = httpx.get(f"{WHOOP_BASE}/cycle", headers=headers, params=params)
-        resp.raise_for_status()
-        body = resp.json()
+        row = db.query(WhoopRecovery).filter_by(cycle_id=cycle_id).first()
+        if not row:
+            continue
+        row.recovery_score = score.get("recovery_score")
+        row.hrv_rmssd = score.get("hrv_rmssd_milli")
+        row.resting_hr = score.get("resting_heart_rate")
 
-        for cycle in body.get("records", []):
-            cycle_id = cycle["id"]
-            cycle_date = date.fromisoformat(cycle["start"][:10])
-            recovery = cycle.get("score") or {}
-            existing = db.query(WhoopRecovery).filter_by(cycle_id=cycle_id).first()
-            if not existing:
-                row = WhoopRecovery(
-                    cycle_id=cycle_id,
-                    date=cycle_date,
-                    recovery_score=recovery.get("recovery_score"),
-                    hrv_rmssd=recovery.get("hrv_rmssd_milli"),
-                    resting_hr=recovery.get("resting_heart_rate"),
-                    sleep_performance=cycle.get("sleep", {}).get("score", {}).get("sleep_performance_percentage"),
-                    strain=cycle.get("strain", {}).get("score", {}).get("strain"),
-                )
-                db.add(row)
-
-        db.commit()
-        next_token = body.get("next_token")
-        if not next_token:
-            break
+    db.commit()
 
 
 def sync_sleep(db: Session, client_id: str, client_secret: str, days: int = 90):
@@ -83,37 +108,23 @@ def sync_sleep(db: Session, client_id: str, client_secret: str, days: int = 90):
     _refresh_if_needed(db, token, client_id, client_secret)
 
     start = (date.today() - timedelta(days=days)).isoformat() + "T00:00:00.000Z"
-    headers = {"Authorization": f"Bearer {token.access_token}"}
-    next_token = None
 
-    while True:
-        params = {"start": start, "limit": 25}
-        if next_token:
-            params["nextToken"] = next_token
+    for sleep in _paginate(f"{WHOOP_BASE}/activity/sleep", _headers(token), start):
+        if sleep.get("nap"):
+            continue  # skip naps
+        sleep_id = sleep["id"]
+        sleep_date = date.fromisoformat(sleep["start"][:10])
+        score = sleep.get("score") or {}
+        stage = score.get("stage_summary") or {}
 
-        resp = httpx.get(f"{WHOOP_BASE}/activity/sleep", headers=headers, params=params)
-        resp.raise_for_status()
-        body = resp.json()
+        existing = db.query(WhoopSleep).filter_by(sleep_id=sleep_id).first()
+        if not existing:
+            db.add(WhoopSleep(
+                sleep_id=sleep_id,
+                date=sleep_date,
+                total_sleep_hours=round(stage.get("total_in_bed_time_milli", 0) / 3_600_000, 2),
+                sleep_efficiency=score.get("sleep_efficiency_percentage"),
+                sleep_score=score.get("sleep_performance_percentage"),
+            ))
 
-        for sleep in body.get("records", []):
-            sleep_id = sleep["id"]
-            sleep_date = date.fromisoformat(sleep["start"][:10])
-            score = sleep.get("score") or {}
-            existing = db.query(WhoopSleep).filter_by(sleep_id=sleep_id).first()
-            if not existing:
-                total_ms = sleep.get("nap", False) is False and (
-                    sleep.get("score", {}).get("total_in_bed_time_milli", 0)
-                )
-                row = WhoopSleep(
-                    sleep_id=sleep_id,
-                    date=sleep_date,
-                    total_sleep_hours=round(score.get("total_in_bed_time_milli", 0) / 3_600_000, 2),
-                    sleep_efficiency=score.get("sleep_efficiency_percentage"),
-                    sleep_score=score.get("sleep_performance_percentage"),
-                )
-                db.add(row)
-
-        db.commit()
-        next_token = body.get("next_token")
-        if not next_token:
-            break
+    db.commit()

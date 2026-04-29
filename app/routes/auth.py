@@ -1,3 +1,4 @@
+import secrets
 import httpx
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -17,17 +18,27 @@ STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token"
 
 @router.get("/whoop")
 def whoop_login():
+    state = secrets.token_hex(16)
     params = (
         f"?response_type=code"
         f"&client_id={settings.whoop_client_id}"
         f"&redirect_uri={settings.whoop_redirect_uri}"
         f"&scope=read:recovery read:sleep read:workout read:cycles read:body_measurement offline"
+        f"&state={state}"
     )
     return RedirectResponse(WHOOP_AUTH_URL + params)
 
 
 @router.get("/whoop/callback")
-def whoop_callback(code: str, db: Session = Depends(get_db)):
+def whoop_callback(
+    request: Request,
+    code: str = None,
+    error: str = None,
+    state: str = None,
+    db: Session = Depends(get_db),
+):
+    if error or not code:
+        return HTMLResponse(f"<h2>Whoop auth failed</h2><p>Error: {error}</p><p>Full URL: {request.url}</p>")
     resp = httpx.post(WHOOP_TOKEN_URL, data={
         "grant_type": "authorization_code",
         "code": code,
@@ -52,7 +63,14 @@ def strava_login():
 
 
 @router.get("/strava/callback")
-def strava_callback(code: str, db: Session = Depends(get_db)):
+def strava_callback(
+    request: Request,
+    code: str = None,
+    error: str = None,
+    db: Session = Depends(get_db),
+):
+    if error or not code:
+        return HTMLResponse(f"<h2>Strava auth failed</h2><p>Error: {error}</p><p>Full URL: {request.url}</p>")
     resp = httpx.post(STRAVA_TOKEN_URL, data={
         "client_id": settings.strava_client_id,
         "client_secret": settings.strava_client_secret,

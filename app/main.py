@@ -15,6 +15,7 @@ def run_daily_sync():
     try:
         if settings.whoop_client_id:
             try:
+                whoop_sync.sync_cycles(db, settings.whoop_client_id, settings.whoop_client_secret)
                 whoop_sync.sync_recovery(db, settings.whoop_client_id, settings.whoop_client_secret)
                 whoop_sync.sync_sleep(db, settings.whoop_client_id, settings.whoop_client_secret)
             except Exception as e:
