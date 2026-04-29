@@ -261,14 +261,15 @@ function renderVolumeChart(activities) {
     const key = mon.toISOString().slice(0, 10);
     if (!weeks[key]) weeks[key] = {};
     const sport = displaySport(a.sport_type || 'other');
-    weeks[key][sport] = (weeks[key][sport] || 0) + (a.distance_miles || 0);
+    weeks[key][sport] = (weeks[key][sport] || 0) + (a.duration_minutes || 0) / 60;
   });
   const dates = Object.keys(weeks).sort();
   const sports = [...new Set(activities.map(a => displaySport(a.sport_type || 'other')))];
   Plotly.newPlot('chartVolume', sports.map((sport, i) => ({
-    x: dates, y: dates.map(d => weeks[d][sport] || 0),
+    x: dates, y: dates.map(d => Math.round((weeks[d][sport] || 0) * 10) / 10),
     name: sport, type: 'bar', marker: { color: sportColor(sport, i) },
-  })), { ...PLOTLY_LAYOUT, barmode: 'stack', yaxis: { ...PLOTLY_LAYOUT.yaxis, title: 'mi' } }, PLOTLY_CONFIG);
+    hovertemplate: `${sport}<br>%{y} hrs<extra></extra>`,
+  })), { ...PLOTLY_LAYOUT, barmode: 'stack', yaxis: { ...PLOTLY_LAYOUT.yaxis, title: 'hrs' } }, PLOTLY_CONFIG);
 }
 
 function renderReadinessChart(data) {
