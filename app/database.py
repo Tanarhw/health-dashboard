@@ -1,7 +1,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
-engine = create_engine("sqlite:///./health.db", connect_args={"check_same_thread": False})
+import os
+_db_path = "/data/health.db" if os.path.isdir("/data") else "./health.db"
+engine = create_engine(f"sqlite:///{_db_path}", connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
 
