@@ -307,13 +307,13 @@ function renderVolumeChart(activities) {
   });
   const sports = [...new Set(activities.map(a => displaySport(a.sport_type || 'other')))];
   Plotly.newPlot('chartVolume', sports.map((sport, i) => ({
-    x: dates, y: dates.map(d => Math.round((weeks[d][sport] || 0) * 10) / 10),
+    x: tickLabels, y: dates.map(d => Math.round((weeks[d][sport] || 0) * 10) / 10),
     name: sport, type: 'bar', marker: { color: sportColor(sport, i) },
     hovertemplate: sport + '<br>%{y} hrs<extra></extra>',
   })), {
     ...PLOTLY_LAYOUT, barmode: 'stack',
     yaxis: { ...PLOTLY_LAYOUT.yaxis, title: 'hrs' },
-    xaxis: { ...PLOTLY_LAYOUT.xaxis, tickvals: dates, ticktext: tickLabels },
+    xaxis: { ...PLOTLY_LAYOUT.xaxis, type: 'category' },
   }, PLOTLY_CONFIG);
 }
 
