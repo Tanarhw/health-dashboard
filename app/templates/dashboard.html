@@ -167,20 +167,20 @@ function rollingAvg(vals, n = 7) {
 }
 
 function goalLine(yref, y, color) {
-  return { type: 'line', xref: 'paper', x0: 0, x1: 1, yref, y0: y, y1: y, line: { color, width: 1, dash: 'dot' } };
+  return { type: 'line', xref: 'paper', x0: 0, x1: 1, yref, y0: y, y1: y, line: { color, width: 1.5, dash: 'dash' }, opacity: 0.6 };
 }
 
 // --- Load dashboard ---
 async function loadDashboard() {
   const [recovery, sleep, load, activities, garmin, readiness, vo2, zones] = await Promise.all([
-    fetch('/api/recovery?days=60').then(r => r.json()),
-    fetch('/api/sleep?days=60').then(r => r.json()),
-    fetch('/api/training-load?weeks=16').then(r => r.json()),
-    fetch('/api/activities?weeks=12').then(r => r.json()),
-    fetch('/api/garmin-daily?days=60').then(r => r.json()),
-    fetch('/api/readiness?weeks=12').then(r => r.json()),
-    fetch('/api/vo2max?days=365').then(r => r.json()),
-    fetch('/api/hr-zones?weeks=12').then(r => r.json()),
+    fetch('/api/recovery?days=30').then(r => r.json()),
+    fetch('/api/sleep?days=30').then(r => r.json()),
+    fetch('/api/training-load?weeks=8').then(r => r.json()),
+    fetch('/api/activities?weeks=4').then(r => r.json()),
+    fetch('/api/garmin-daily?days=30').then(r => r.json()),
+    fetch('/api/readiness?weeks=4').then(r => r.json()),
+    fetch('/api/vo2max?days=90').then(r => r.json()),
+    fetch('/api/hr-zones?weeks=8').then(r => r.json()),
   ]);
 
   renderStatCards(recovery, load, garmin, readiness, vo2);
@@ -191,15 +191,15 @@ async function loadDashboard() {
   const MTHS  = [{ label: '3mo', value: 90 }, { label: '6mo', value: 180 }, { label: '1yr', value: 365 }];
   const ZWKS  = [{ label: '8w', value: 8 }, { label: '16w', value: 16 }, { label: '26w', value: 26 }];
 
-  makeToggle('toggleRecovery', DAYS, 60, async d => renderRecoveryChart(await fetch(`/api/recovery?days=${d}`).then(r => r.json())));
-  makeToggle('toggleLoad',     WEEKS, 16, async w => renderLoadChart(await fetch(`/api/training-load?weeks=${w}`).then(r => r.json())));
-  makeToggle('toggleSleep',    DAYS, 60, async d => renderSleepChart(await fetch(`/api/sleep?days=${d}`).then(r => r.json())));
-  makeToggle('toggleVolume',   WKSM, 12, async w => renderVolumeChart(await fetch(`/api/activities?weeks=${w}`).then(r => r.json())));
-  makeToggle('toggleReadiness',WKSM, 12, async w => renderReadinessChart(await fetch(`/api/readiness?weeks=${w}`).then(r => r.json())));
-  makeToggle('toggleStrain',   DAYS, 60, async d => renderStrainRecovery(await fetch(`/api/recovery?days=${d}`).then(r => r.json())));
-  makeToggle('toggleVo2',      MTHS, 365, async d => renderVo2Chart(await fetch(`/api/vo2max?days=${d}`).then(r => r.json())));
-  makeToggle('toggleGarmin',   DAYS, 60, async d => renderGarminChart(await fetch(`/api/garmin-daily?days=${d}`).then(r => r.json())));
-  makeToggle('toggleZones',    ZWKS, 12, async w => renderZonesChart(await fetch(`/api/hr-zones?weeks=${w}`).then(r => r.json())));
+  makeToggle('toggleRecovery', DAYS,  30,  async d => renderRecoveryChart(await fetch(`/api/recovery?days=${d}`).then(r => r.json())));
+  makeToggle('toggleLoad',     WEEKS,  8,  async w => renderLoadChart(await fetch(`/api/training-load?weeks=${w}`).then(r => r.json())));
+  makeToggle('toggleSleep',    DAYS,  30,  async d => renderSleepChart(await fetch(`/api/sleep?days=${d}`).then(r => r.json())));
+  makeToggle('toggleVolume',   WKSM,   4,  async w => renderVolumeChart(await fetch(`/api/activities?weeks=${w}`).then(r => r.json())));
+  makeToggle('toggleReadiness',WKSM,   4,  async w => renderReadinessChart(await fetch(`/api/readiness?weeks=${w}`).then(r => r.json())));
+  makeToggle('toggleStrain',   DAYS,  30,  async d => renderStrainRecovery(await fetch(`/api/recovery?days=${d}`).then(r => r.json())));
+  makeToggle('toggleVo2',      MTHS,  90,  async d => renderVo2Chart(await fetch(`/api/vo2max?days=${d}`).then(r => r.json())));
+  makeToggle('toggleGarmin',   DAYS,  30,  async d => renderGarminChart(await fetch(`/api/garmin-daily?days=${d}`).then(r => r.json())));
+  makeToggle('toggleZones',    ZWKS,   8,  async w => renderZonesChart(await fetch(`/api/hr-zones?weeks=${w}`).then(r => r.json())));
 
   renderRecoveryChart(recovery);
   renderLoadChart(load);
