@@ -300,18 +300,22 @@ function renderVolumeChart(activities) {
     weeks[key][sport] = (weeks[key][sport] || 0) + (a.duration_minutes || 0) / 60;
   });
   const dates = Object.keys(weeks).sort();
-  const labels = dates.map(key => {
+  const tickLabels = dates.map(key => {
     const [ky, km, kd] = key.split('-').map(Number);
     const sun = new Date(ky, km - 1, kd);
     const sat = new Date(ky, km - 1, kd + 6);
-    return `${sun.getMonth()+1}/${sun.getDate()} - ${sat.getMonth()+1}/${sat.getDate()}`;
+    return (sun.getMonth()+1) + '/' + sun.getDate() + ' - ' + (sat.getMonth()+1) + '/' + sat.getDate();
   });
   const sports = [...new Set(activities.map(a => displaySport(a.sport_type || 'other')))];
   Plotly.newPlot('chartVolume', sports.map((sport, i) => ({
-    x: labels, y: dates.map(d => Math.round((weeks[d][sport] || 0) * 10) / 10),
+    x: dates, y: dates.map(d => Math.round((weeks[d][sport] || 0) * 10) / 10),
     name: sport, type: 'bar', marker: { color: sportColor(sport, i) },
-    hovertemplate: `${sport}<br>%{y} hrs<extra></extra>`,
-  })), { ...PLOTLY_LAYOUT, barmode: 'stack', yaxis: { ...PLOTLY_LAYOUT.yaxis, title: 'hrs' } }, PLOTLY_CONFIG);
+    hovertemplate: sport + '<br>%{y} hrs<extra></extra>',
+  })), {
+    ...PLOTLY_LAYOUT, barmode: 'stack',
+    yaxis: { ...PLOTLY_LAYOUT.yaxis, title: 'hrs' },
+    xaxis: { ...PLOTLY_LAYOUT.xaxis, tickvals: dates, ticktext: tickLabels },
+  }, PLOTLY_CONFIG);
 }
 
 function renderReadinessChart(data) {
