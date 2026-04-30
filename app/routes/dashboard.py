@@ -4,6 +4,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from app.config import settings
 from app.database import get_db
 from app.models import Activity, GarminDaily, GarminTrainingLoad, WhoopRecovery, WhoopSleep
 
@@ -27,6 +28,61 @@ def monthly_report(request: Request, month: str = None):
 @router.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@router.get("/debug/garmin")
+def debug_garmin():
+    """Test Garmin connectivity and surface any auth/API errors."""
+    from app.sync.garmin import _client, GARTH_TOKENS_DIR
+    import traceback
+
+    result = {
+        "garmin_email_set": bool(settings.garmin_email),
+        "garmin_password_set": bool(settings.garmin_password),
+        "token_dir": str(GARTH_TOKENS_DIR),
+        "token_dir_exists": GARTH_TOKENS_DIR.exists(),
+    }
+
+    if not settings.garmin_email or not settings.garmin_password:
+        result["error"] = "GARMIN_EMAIL or GARMIN_PASSWORD not set"
+        return result
+
+    try:
+        client = _client(settings.garmin_email, settings.garmin_password)
+        result["login"] = "ok"
+    except Exception as e:
+        result["login"] = "failed"
+        result["login_error"] = str(e)
+        result["traceback"] = traceback.format_exc()
+        return result
+
+    try:
+        today = date.today().isoformat()
+        stats = client.get_stats(today)
+        result["get_stats"] = "ok"
+        result["stats_keys"] = list(stats.keys()) if isinstance(stats, dict) else str(type(stats))
+    except Exception as e:
+        result["get_stats"] = f"failed: {e}"
+
+    try:
+        raw = client.get_training_load()
+        result["get_training_load"] = "ok"
+        result["training_load_type"] = type(raw).__name__
+        result["training_load_count"] = len(raw) if isinstance(raw, list) else "n/a"
+        if isinstance(raw, list) and raw:
+            result["training_load_sample_keys"] = list(raw[0].keys()) if isinstance(raw[0], dict) else str(raw[0])
+    except Exception as e:
+        result["get_training_load"] = f"failed: {e}"
+
+    try:
+        start = (date.today() - timedelta(days=7)).isoformat()
+        acts = client.get_activities_by_date(start, date.today().isoformat())
+        result["get_activities"] = "ok"
+        result["activity_count_last_7d"] = len(acts) if isinstance(acts, list) else "n/a"
+    except Exception as e:
+        result["get_activities"] = f"failed: {e}"
+
+    return result
 
 
 # --- JSON API endpoints consumed by the frontend charts ---

@@ -3,42 +3,52 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 from app.models import Activity, GarminDaily, GarminTrainingLoad
 
-GARTH_TOKENS_DIR = Path.home() / ".garth"
+# Use persistent volume on Railway if available, otherwise ~/.garth
+_DATA_DIR = Path("/data")
+GARTH_TOKENS_DIR = _DATA_DIR / ".garth" if _DATA_DIR.exists() else Path.home() / ".garth"
 
 
 def _client(email: str, password: str):
     from garminconnect import Garmin
     import garth
 
-    # Use cached tokens if available — avoids repeated SSO hits
-    if GARTH_TOKENS_DIR.exists():
+    if GARTH_TOKENS_DIR.exists() and any(GARTH_TOKENS_DIR.iterdir()):
         try:
             garth.resume(str(GARTH_TOKENS_DIR))
             client = Garmin(email, password)
             client.garth = garth.client
+            client.login()
             return client
-        except Exception:
-            pass  # tokens stale, fall through to fresh login
+        except Exception as e:
+            print(f"[garmin] Cached token login failed ({e}), retrying with fresh login")
 
+    print("[garmin] Performing fresh Garmin login")
     client = Garmin(email, password)
     client.login()
-    GARTH_TOKENS_DIR.mkdir(exist_ok=True)
+    GARTH_TOKENS_DIR.mkdir(parents=True, exist_ok=True)
     client.garth.dump(str(GARTH_TOKENS_DIR))
     return client
 
 
 def sync_daily(db: Session, email: str, password: str, days: int = 90):
-    client = _client(email, password)
+    print("[garmin] sync_daily starting")
+    try:
+        client = _client(email, password)
+    except Exception as e:
+        print(f"[garmin] sync_daily auth failed: {e}")
+        return
+
     today = date.today()
+    added = 0
 
     for i in range(days):
         d = today - timedelta(days=i)
-        existing = db.query(GarminDaily).filter_by(date=d).first()
-        if existing:
+        if db.query(GarminDaily).filter_by(date=d).first():
             continue
         try:
             stats = client.get_stats(d.isoformat())
-        except Exception:
+        except Exception as e:
+            print(f"[garmin] get_stats({d}) failed: {e}")
             continue
 
         db.add(GarminDaily(
@@ -49,43 +59,64 @@ def sync_daily(db: Session, email: str, password: str, days: int = 90):
             steps=stats.get("totalSteps"),
             vo2max=stats.get("vo2MaxValue"),
         ))
+        added += 1
 
     db.commit()
+    print(f"[garmin] sync_daily done — {added} new rows")
 
 
 def sync_training_load(db: Session, email: str, password: str):
-    client = _client(email, password)
+    print("[garmin] sync_training_load starting")
+    try:
+        client = _client(email, password)
+    except Exception as e:
+        print(f"[garmin] sync_training_load auth failed: {e}")
+        return
 
     try:
         raw = client.get_training_load()
-    except Exception:
-        return
+        print(f"[garmin] get_training_load returned type={type(raw).__name__} len={len(raw) if isinstance(raw, list) else 'n/a'}")
+    except Exception as e:
+        print(f"[garmin] get_training_load failed: {e}")
+        raw = None
 
-    for entry in raw if isinstance(raw, list) else []:
+    if not raw:
+        # Fallback: try get_training_status which some garminconnect versions expose
         try:
-            d = date.fromisoformat(entry.get("calendarDate", "")[:10])
-        except ValueError:
+            end = date.today().isoformat()
+            start = (date.today() - timedelta(weeks=16)).isoformat()
+            raw = client.get_training_status(start, end)
+            print(f"[garmin] get_training_status fallback returned type={type(raw).__name__}")
+        except Exception as e:
+            print(f"[garmin] get_training_status fallback also failed: {e}")
+            return
+
+    added = 0
+    for entry in raw if isinstance(raw, list) else []:
+        cal_date = entry.get("calendarDate") or entry.get("date") or ""
+        try:
+            d = date.fromisoformat(cal_date[:10])
+        except (ValueError, TypeError):
             continue
 
-        existing = db.query(GarminTrainingLoad).filter_by(date=d).first()
-        if existing:
+        if db.query(GarminTrainingLoad).filter_by(date=d).first():
             continue
 
-        db.add(GarminTrainingLoad(
-            date=d,
-            acute_load=entry.get("acuteLoad"),
-            chronic_load=entry.get("chronicLoad"),
-            training_status=entry.get("trainingStatus"),
-        ))
+        # Field names vary across garminconnect/API versions
+        acute = entry.get("acuteLoad") or entry.get("acuteTrainingLoad")
+        chronic = entry.get("chronicLoad") or entry.get("chronicTrainingLoad")
+        status = entry.get("trainingStatus") or entry.get("trainingStatusPhase")
+
+        db.add(GarminTrainingLoad(date=d, acute_load=acute, chronic_load=chronic, training_status=status))
+        added += 1
 
     db.commit()
+    print(f"[garmin] sync_training_load done — {added} new rows")
 
 
 def _apply_garmin_zones(client, row: Activity, activity_id: str):
-    """Best-effort: populate zone1-5_secs from Garmin activity details."""
     try:
         details = client.get_activity_details(activity_id)
-        # Garmin returns zones under various keys depending on API version
         zones = (
             details.get("heartRateZones")
             or details.get("hrTimeInZones")
@@ -101,15 +132,23 @@ def _apply_garmin_zones(client, row: Activity, activity_id: str):
 
 
 def sync_activities(db: Session, email: str, password: str, days: int = 90):
-    client = _client(email, password)
-    start = date.today() - timedelta(days=days)
-
+    print("[garmin] sync_activities starting")
     try:
-        raw = client.get_activities_by_date(start.isoformat(), date.today().isoformat())
-    except Exception:
+        client = _client(email, password)
+    except Exception as e:
+        print(f"[garmin] sync_activities auth failed: {e}")
         return
 
-    backfill_budget = 30  # max zone backfills per sync to avoid rate limits
+    start = date.today() - timedelta(days=days)
+    try:
+        raw = client.get_activities_by_date(start.isoformat(), date.today().isoformat())
+        print(f"[garmin] fetched {len(raw)} activities")
+    except Exception as e:
+        print(f"[garmin] get_activities_by_date failed: {e}")
+        return
+
+    backfill_budget = 30
+    added = 0
 
     for act in raw:
         external_id = str(act.get("activityId", ""))
@@ -142,7 +181,9 @@ def sync_activities(db: Session, email: str, password: str, days: int = 90):
             elevation_gain=act.get("elevationGain"),
         )
         db.add(row)
+        added += 1
         if act.get("averageHR"):
             _apply_garmin_zones(client, row, external_id)
 
     db.commit()
+    print(f"[garmin] sync_activities done — {added} new rows")
