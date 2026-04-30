@@ -301,10 +301,10 @@ function renderVolumeChart(activities) {
   });
   const dates = Object.keys(weeks).sort();
   const labels = dates.map(key => {
-    const [y, mo, dy] = key.split('-').map(Number);
-    const sun = new Date(y, mo - 1, dy);
-    const sat = new Date(sun); sat.setDate(sun.getDate() + 6);
-    return `${sun.getMonth()+1}/${sun.getDate()}–${sat.getMonth()+1}/${sat.getDate()}`;
+    const [ky, km, kd] = key.split('-').map(Number);
+    const sun = new Date(ky, km - 1, kd);
+    const sat = new Date(ky, km - 1, kd + 6);
+    return `${sun.getMonth()+1}/${sun.getDate()} - ${sat.getMonth()+1}/${sat.getDate()}`;
   });
   const sports = [...new Set(activities.map(a => displaySport(a.sport_type || 'other')))];
   Plotly.newPlot('chartVolume', sports.map((sport, i) => ({
