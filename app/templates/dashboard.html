@@ -300,9 +300,15 @@ function renderVolumeChart(activities) {
     weeks[key][sport] = (weeks[key][sport] || 0) + (a.duration_minutes || 0) / 60;
   });
   const dates = Object.keys(weeks).sort();
+  const labels = dates.map(key => {
+    const [y, mo, dy] = key.split('-').map(Number);
+    const sun = new Date(y, mo - 1, dy);
+    const sat = new Date(sun); sat.setDate(sun.getDate() + 6);
+    return `${sun.getMonth()+1}/${sun.getDate()}–${sat.getMonth()+1}/${sat.getDate()}`;
+  });
   const sports = [...new Set(activities.map(a => displaySport(a.sport_type || 'other')))];
   Plotly.newPlot('chartVolume', sports.map((sport, i) => ({
-    x: dates, y: dates.map(d => Math.round((weeks[d][sport] || 0) * 10) / 10),
+    x: labels, y: dates.map(d => Math.round((weeks[d][sport] || 0) * 10) / 10),
     name: sport, type: 'bar', marker: { color: sportColor(sport, i) },
     hovertemplate: `${sport}<br>%{y} hrs<extra></extra>`,
   })), { ...PLOTLY_LAYOUT, barmode: 'stack', yaxis: { ...PLOTLY_LAYOUT.yaxis, title: 'hrs' } }, PLOTLY_CONFIG);
