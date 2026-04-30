@@ -87,7 +87,7 @@
   </div>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
   <div class="card">
     <div class="flex items-center justify-between mb-3">
       <div class="chart-title">VO2 Max Trend</div>
@@ -101,6 +101,13 @@
       <div id="toggleGarmin"></div>
     </div>
     <div id="chartGarmin" style="height:200px"></div>
+  </div>
+  <div class="card">
+    <div class="flex items-center justify-between mb-3">
+      <div class="chart-title">Resting Heart Rate</div>
+      <div id="toggleRestingHr"></div>
+    </div>
+    <div id="chartRestingHr" style="height:200px"></div>
   </div>
 </div>
 
@@ -119,6 +126,37 @@
     </div>
   </div>
   <div id="chartZones" style="height:220px"></div>
+</div>
+
+<div class="card mb-4">
+  <div class="flex items-center justify-between mb-4">
+    <div class="chart-title">Training Calendar</div>
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-1 text-xs" style="color:#3d5570">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#0d1f2e"></span>Rest
+        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#0e3d20;margin-left:6px"></span>&lt;20m
+        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#006d32;margin-left:6px"></span>20–45m
+        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#26a641;margin-left:6px"></span>45–75m
+        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#39d353;margin-left:6px"></span>75m+
+      </div>
+    </div>
+  </div>
+  <div id="chartHeatmap" class="overflow-x-auto pb-1"></div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+  <div class="card">
+    <div class="flex items-center justify-between mb-3">
+      <div class="chart-title">Pace &amp; Speed Trend</div>
+      <div id="togglePaceSport"></div>
+    </div>
+    <div class="text-xs mb-2" style="color:#3d5570">Runs: min/mile (lower = faster) &nbsp;|&nbsp; Rides: mph</div>
+    <div id="chartPace" style="height:200px"></div>
+  </div>
+  <div class="card">
+    <div class="chart-title mb-4">Personal Records</div>
+    <div id="tableRecords"></div>
+  </div>
 </div>
 {% endblock %}
 
@@ -180,7 +218,7 @@ function goalLine(yref, y, color) {
 
 // --- Load dashboard ---
 async function loadDashboard() {
-  const [recovery, sleep, load, activities, garmin, readiness, vo2, zones] = await Promise.all([
+  const [recovery, sleep, load, activities, garmin, readiness, vo2, zones, allActivities] = await Promise.all([
     fetch('/api/recovery?days=30').then(r => r.json()),
     fetch('/api/sleep?days=30').then(r => r.json()),
     fetch('/api/training-load?weeks=8').then(r => r.json()),
@@ -189,6 +227,7 @@ async function loadDashboard() {
     fetch('/api/readiness?weeks=4').then(r => r.json()),
     fetch('/api/vo2max?days=90').then(r => r.json()),
     fetch('/api/hr-zones?weeks=8').then(r => r.json()),
+    fetch('/api/activities?weeks=52').then(r => r.json()),
   ]);
 
   renderStatCards(recovery, load, garmin, readiness, vo2);
@@ -198,16 +237,19 @@ async function loadDashboard() {
   const WKSM  = [{ label: '4w', value: 4 }, { label: '8w', value: 8 }, { label: '12w', value: 12 }];
   const MTHS  = [{ label: '3mo', value: 90 }, { label: '6mo', value: 180 }, { label: '1yr', value: 365 }];
   const ZWKS  = [{ label: '8w', value: 8 }, { label: '16w', value: 16 }, { label: '26w', value: 26 }];
+  const SPORTS = [{ label: 'Run', value: 'Run' }, { label: 'Ride', value: 'Ride' }];
 
-  makeToggle('toggleRecovery', DAYS,  30,  async d => renderRecoveryChart(await fetch(`/api/recovery?days=${d}`).then(r => r.json())));
-  makeToggle('toggleLoad',     WEEKS,  8,  async w => renderLoadChart(await fetch(`/api/training-load?weeks=${w}`).then(r => r.json())));
-  makeToggle('toggleSleep',    DAYS,  30,  async d => renderSleepChart(await fetch(`/api/sleep?days=${d}`).then(r => r.json())));
-  makeToggle('toggleVolume',   WKSM,   4,  async w => renderVolumeChart(await fetch(`/api/activities?weeks=${w}`).then(r => r.json())));
-  makeToggle('toggleReadiness',WKSM,   4,  async w => renderReadinessChart(await fetch(`/api/readiness?weeks=${w}`).then(r => r.json())));
-  makeToggle('toggleStrain',   DAYS,  30,  async d => renderStrainRecovery(await fetch(`/api/recovery?days=${d}`).then(r => r.json())));
-  makeToggle('toggleVo2',      MTHS,  90,  async d => renderVo2Chart(await fetch(`/api/vo2max?days=${d}`).then(r => r.json())));
-  makeToggle('toggleGarmin',   DAYS,  30,  async d => renderGarminChart(await fetch(`/api/garmin-daily?days=${d}`).then(r => r.json())));
-  makeToggle('toggleZones',    ZWKS,   8,  async w => renderZonesChart(await fetch(`/api/hr-zones?weeks=${w}`).then(r => r.json())));
+  makeToggle('toggleRecovery',  DAYS,   30,  async d => renderRecoveryChart(await fetch(`/api/recovery?days=${d}`).then(r => r.json())));
+  makeToggle('toggleLoad',      WEEKS,   8,  async w => renderLoadChart(await fetch(`/api/training-load?weeks=${w}`).then(r => r.json())));
+  makeToggle('toggleSleep',     DAYS,   30,  async d => renderSleepChart(await fetch(`/api/sleep?days=${d}`).then(r => r.json())));
+  makeToggle('toggleVolume',    WKSM,    4,  async w => renderVolumeChart(await fetch(`/api/activities?weeks=${w}`).then(r => r.json())));
+  makeToggle('toggleReadiness', WKSM,    4,  async w => renderReadinessChart(await fetch(`/api/readiness?weeks=${w}`).then(r => r.json())));
+  makeToggle('toggleStrain',    DAYS,   30,  async d => renderStrainRecovery(await fetch(`/api/recovery?days=${d}`).then(r => r.json())));
+  makeToggle('toggleVo2',       MTHS,   90,  async d => renderVo2Chart(await fetch(`/api/vo2max?days=${d}`).then(r => r.json())));
+  makeToggle('toggleGarmin',    DAYS,   30,  async d => { const g = await fetch(`/api/garmin-daily?days=${d}`).then(r => r.json()); renderGarminChart(g); renderRestingHrChart(g); });
+  makeToggle('toggleRestingHr', DAYS,   30,  async d => renderRestingHrChart(await fetch(`/api/garmin-daily?days=${d}`).then(r => r.json())));
+  makeToggle('toggleZones',     ZWKS,    8,  async w => renderZonesChart(await fetch(`/api/hr-zones?weeks=${w}`).then(r => r.json())));
+  makeToggle('togglePaceSport', SPORTS, 'Run', sport => renderPaceTrend(allActivities, sport));
 
   renderRecoveryChart(recovery);
   renderLoadChart(load);
@@ -217,7 +259,11 @@ async function loadDashboard() {
   renderStrainRecovery(recovery);
   renderVo2Chart(vo2);
   renderGarminChart(garmin);
+  renderRestingHrChart(garmin);
   renderZonesChart(zones);
+  renderHeatmap(allActivities);
+  renderPaceTrend(allActivities, 'Run');
+  renderPersonalRecords(allActivities);
 }
 
 // --- Stat cards ---
@@ -489,6 +535,200 @@ function renderZonesChart(data) {
     barmode: 'stack',
     yaxis: { ...PLOTLY_LAYOUT.yaxis, title: 'min' },
   }, PLOTLY_CONFIG);
+}
+
+function renderRestingHrChart(data) {
+  const dates = data.map(d => d.date);
+  const vals  = data.map(d => d.resting_hr);
+  if (!data.some(d => d.resting_hr != null)) {
+    document.getElementById('chartRestingHr').innerHTML = '<p class="text-xs pt-16 text-center" style="color:#3d5570">No resting HR yet — sync Garmin to populate</p>';
+    return;
+  }
+  Plotly.newPlot('chartRestingHr', [
+    { x: dates, y: vals, name: 'Resting HR', type: 'scatter', mode: 'lines',
+      line: { color: '#f43f5e', width: 1.5 }, fill: 'tozeroy', fillcolor: 'rgba(244,63,94,0.06)',
+      hovertemplate: '%{x}<br>Resting HR: %{y} bpm<extra></extra>' },
+    { x: dates, y: rollingAvg(vals, 7), name: '7d avg', type: 'scatter', mode: 'lines',
+      line: { color: '#f43f5e', width: 2.5 }, showlegend: false, hoverinfo: 'skip' },
+  ], {
+    ...PLOTLY_LAYOUT,
+    yaxis: { ...PLOTLY_LAYOUT.yaxis, title: 'bpm' },
+  }, PLOTLY_CONFIG);
+}
+
+function renderHeatmap(activities) {
+  const el = document.getElementById('chartHeatmap');
+
+  const dayData = {};
+  activities.forEach(a => {
+    if (!dayData[a.date]) dayData[a.date] = { mins: 0, sports: [] };
+    dayData[a.date].mins += a.duration_minutes || 0;
+    const sport = displaySport(a.sport_type || 'other');
+    if (!dayData[a.date].sports.includes(sport)) dayData[a.date].sports.push(sport);
+  });
+
+  function cellColor(mins) {
+    if (!mins) return '#0d1f2e';
+    if (mins < 20)  return '#0e3d20';
+    if (mins < 45)  return '#006d32';
+    if (mins < 75)  return '#26a641';
+    return '#39d353';
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  // Align start to the Sunday 51 weeks back
+  const start = new Date(today);
+  start.setDate(today.getDate() - today.getDay() - 51 * 7);
+
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const CELL = 13, GAP = 2, STRIDE = CELL + GAP;
+  const LEFT = 28, TOP = 18;
+
+  const weeks = [];
+  const cur = new Date(start);
+  while (weeks.length < 52) {
+    const week = [];
+    for (let d = 0; d < 7; d++) {
+      const ds = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
+      week.push({ date: ds, data: dayData[ds] || null, isFuture: cur > today });
+      cur.setDate(cur.getDate() + 1);
+    }
+    weeks.push(week);
+  }
+
+  const W = LEFT + weeks.length * STRIDE;
+  const H = TOP + 7 * STRIDE + 4;
+
+  let html = `<div style="position:relative;width:${W}px;height:${H}px;min-width:${W}px">`;
+
+  // Day labels (Mon, Wed, Fri)
+  [[1,'M'],[3,'W'],[5,'F']].forEach(([d, label]) => {
+    html += `<span style="position:absolute;right:${W - LEFT + 5}px;top:${TOP + d * STRIDE + 1}px;font-size:9px;color:#3d5570;line-height:1">${label}</span>`;
+  });
+
+  // Month labels + cells
+  let lastMonth = -1;
+  weeks.forEach((week, wi) => {
+    const month = parseInt(week[0].date.slice(5, 7)) - 1;
+    if (month !== lastMonth) {
+      html += `<span style="position:absolute;left:${LEFT + wi * STRIDE}px;top:0;font-size:9px;color:#3d5570;white-space:nowrap">${MONTHS[month]}</span>`;
+      lastMonth = month;
+    }
+    week.forEach((day, di) => {
+      if (day.isFuture) return;
+      const color = day.data ? cellColor(day.data.mins) : '#0d1f2e';
+      const tip = day.data
+        ? `${day.date} — ${Math.round(day.data.mins)}min (${day.data.sports.join(', ')})`
+        : day.date;
+      html += `<div title="${tip}" style="position:absolute;left:${LEFT + wi * STRIDE}px;top:${TOP + di * STRIDE}px;width:${CELL}px;height:${CELL}px;background:${color};border-radius:2px"></div>`;
+    });
+  });
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function renderPaceTrend(activities, sport = 'Run') {
+  const el = document.getElementById('chartPace');
+  const isRun = sport === 'Run';
+  const filtered = activities.filter(a =>
+    displaySport(a.sport_type || '') === sport &&
+    (a.distance_miles || 0) >= (isRun ? 0.5 : 1) &&
+    (a.duration_minutes || 0) > 0
+  ).sort((a, b) => a.date.localeCompare(b.date));
+
+  if (!filtered.length) {
+    el.innerHTML = `<p class="text-xs pt-16 text-center" style="color:#3d5570">No ${sport} data yet</p>`;
+    return;
+  }
+
+  const color = isRun ? '#f43f5e' : '#22d3ee';
+  const dates = filtered.map(a => a.date);
+  const vals  = filtered.map(a =>
+    isRun
+      ? Math.round((a.duration_minutes / a.distance_miles) * 10) / 10
+      : Math.round((a.distance_miles / (a.duration_minutes / 60)) * 10) / 10
+  );
+  const names = filtered.map(a => a.name || sport);
+  const dists = filtered.map(a => a.distance_miles ? a.distance_miles.toFixed(1) : '—');
+
+  const yTitle = isRun ? 'min / mile' : 'mph';
+  const hoverFmt = isRun
+    ? '%{text}<br>%{customdata} mi<br>Pace: %{y:.1f} min/mi<extra></extra>'
+    : '%{text}<br>%{customdata} mi<br>Speed: %{y:.1f} mph<extra></extra>';
+
+  Plotly.newPlot('chartPace', [
+    { x: dates, y: vals, text: names, customdata: dists,
+      type: 'scatter', mode: 'markers',
+      marker: { color, size: 6, opacity: 0.65 },
+      hovertemplate: hoverFmt, showlegend: false },
+    { x: dates, y: rollingAvg(vals, 5),
+      type: 'scatter', mode: 'lines',
+      line: { color, width: 2.5 }, showlegend: false, hoverinfo: 'skip' },
+  ], {
+    ...PLOTLY_LAYOUT,
+    yaxis: { ...PLOTLY_LAYOUT.yaxis, title: yTitle, autorange: isRun ? 'reversed' : true },
+  }, PLOTLY_CONFIG);
+}
+
+function renderPersonalRecords(activities) {
+  const el = document.getElementById('tableRecords');
+  if (!activities.length) {
+    el.innerHTML = '<p class="text-xs" style="color:#3d5570">No activity data yet</p>';
+    return;
+  }
+
+  const byType = {};
+  activities.forEach(a => {
+    const s = displaySport(a.sport_type || 'other');
+    (byType[s] = byType[s] || []).push(a);
+  });
+
+  const records = [];
+
+  const runs = (byType['Run'] || []).filter(a => (a.distance_miles || 0) > 0);
+  if (runs.length) {
+    const b = runs.reduce((a, c) => c.distance_miles > a.distance_miles ? c : a);
+    records.push({ icon: '🏃', label: 'Longest Run', value: b.distance_miles.toFixed(1) + ' mi', date: b.date });
+  }
+  const longRuns = runs.filter(r => r.distance_miles >= 2 && r.duration_minutes > 0);
+  if (longRuns.length) {
+    const b = longRuns.reduce((a, c) => (c.duration_minutes / c.distance_miles) < (a.duration_minutes / a.distance_miles) ? c : a);
+    const p = b.duration_minutes / b.distance_miles;
+    records.push({ icon: '⚡', label: 'Best Run Pace', value: `${Math.floor(p)}:${String(Math.round((p % 1) * 60)).padStart(2,'0')} /mi`, date: b.date });
+  }
+
+  const rides = (byType['Ride'] || []).filter(a => (a.distance_miles || 0) > 0);
+  if (rides.length) {
+    const b = rides.reduce((a, c) => c.distance_miles > a.distance_miles ? c : a);
+    records.push({ icon: '🚴', label: 'Longest Ride', value: b.distance_miles.toFixed(1) + ' mi', date: b.date });
+  }
+
+  const withElev = activities.filter(a => (a.elevation_ft || 0) > 0);
+  if (withElev.length) {
+    const b = withElev.reduce((a, c) => c.elevation_ft > a.elevation_ft ? c : a);
+    records.push({ icon: '⛰️', label: 'Most Elevation', value: Math.round(b.elevation_ft).toLocaleString() + ' ft', date: b.date });
+  }
+
+  const withDur = activities.filter(a => (a.duration_minutes || 0) > 0);
+  if (withDur.length) {
+    const b = withDur.reduce((a, c) => c.duration_minutes > a.duration_minutes ? c : a);
+    const h = Math.floor(b.duration_minutes / 60), m = Math.round(b.duration_minutes % 60);
+    records.push({ icon: '⏱️', label: 'Longest Session', value: h > 0 ? `${h}h ${m}m` : `${m}m`, date: b.date });
+  }
+
+  el.innerHTML = records.map(r => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(6,182,212,0.08)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:1.05rem">${r.icon}</span>
+        <span style="font-size:0.68rem;font-weight:700;color:#4a7a9b;text-transform:uppercase;letter-spacing:0.07em">${r.label}</span>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:0.92rem;font-weight:800;color:#e2e8f0">${r.value}</div>
+        <div style="font-size:0.58rem;color:#3d5570;margin-top:1px">${r.date}</div>
+      </div>
+    </div>`).join('');
 }
 
 loadDashboard();
