@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo.svg" alt="TANAR Health Dashboard" width="420">
+</p>
+
 # TANAR Health Dashboard
 
 A personal athletic performance dashboard that aggregates data from Whoop, Garmin, and Strava into a single dark-themed HUD. Built to feel like a weapon — not a wellness app.
