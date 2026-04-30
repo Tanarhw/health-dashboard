@@ -60,10 +60,14 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
   <div class="card">
     <div class="flex items-center justify-between mb-3">
-      <div class="chart-title">Weekly Readiness Score</div>
+      <div>
+        <div class="chart-title">Weekly Readiness</div>
+        <div style="font-size:0.58rem;color:#2d4a62;margin-top:4px;letter-spacing:0.04em">Recovery 40% &middot; Sleep 30% &middot; HRV 20% &middot; Load 10%</div>
+      </div>
       <div id="toggleReadiness"></div>
     </div>
-    <div id="chartReadiness" style="height:220px"></div>
+    <div id="readinessSummary" class="mb-3"></div>
+    <div id="chartReadiness" style="height:175px"></div>
   </div>
   <div class="card">
     <div class="flex items-center justify-between mb-3">
@@ -318,18 +322,65 @@ function renderVolumeChart(activities) {
 }
 
 function renderReadinessChart(data) {
+  // ── This-week summary strip ──
+  const latest = data.length ? data[data.length - 1] : null;
+  const summaryEl = document.getElementById('readinessSummary');
+  if (latest) {
+    const sc = latest.readiness;
+    const scCol = !sc ? '#4a6a85' : sc >= 75 ? '#00e5a0' : sc >= 50 ? '#f59e0b' : '#f43f5e';
+    const status = !sc ? '—' : sc >= 85 ? 'PEAK' : sc >= 75 ? 'GOOD' : sc >= 50 ? 'FAIR' : 'LOW';
+    const cc = (v, lo, hi) => v == null ? '#4a6a85' : v >= hi ? '#00e5a0' : v >= lo ? '#f59e0b' : '#f43f5e';
+    const loadCol = latest.load_ratio == null ? '#4a6a85'
+      : latest.load_ratio >= 0.8 && latest.load_ratio <= 1.3 ? '#00e5a0'
+      : latest.load_ratio <= 1.5 ? '#f59e0b' : '#f43f5e';
+    const pct = v => v != null ? Math.round(v) + '%' : '—';
+    const ms  = v => v != null ? Math.round(v) + ' ms' : '—';
+    const lr  = v => v != null ? v.toFixed(2) : '—';
+    summaryEl.innerHTML =
+      '<div style="display:flex;align-items:center;gap:14px;padding:10px 14px;background:rgba(6,182,212,0.04);border:1px solid rgba(6,182,212,0.1);border-radius:6px">' +
+        '<div style="text-align:center;min-width:42px">' +
+          '<div style="font-size:1.75rem;font-weight:900;color:' + scCol + ';line-height:1">' + (sc != null ? sc : '—') + '</div>' +
+          '<div style="font-size:0.5rem;color:#4a6a85;letter-spacing:0.1em;font-weight:700;margin-top:2px">THIS WK</div>' +
+        '</div>' +
+        '<div style="width:1px;height:36px;background:rgba(6,182,212,0.18);flex-shrink:0"></div>' +
+        '<div style="display:flex;gap:16px;flex:1">' +
+          '<div><div style="font-size:0.54rem;color:#4a6a85;letter-spacing:0.09em;font-weight:700;margin-bottom:2px">RECOVERY</div><div style="font-size:0.88rem;font-weight:800;color:' + cc(latest.avg_recovery,33,67) + '">' + pct(latest.avg_recovery) + '</div></div>' +
+          '<div><div style="font-size:0.54rem;color:#4a6a85;letter-spacing:0.09em;font-weight:700;margin-bottom:2px">SLEEP</div><div style="font-size:0.88rem;font-weight:800;color:' + cc(latest.avg_sleep,50,75) + '">' + pct(latest.avg_sleep) + '</div></div>' +
+          '<div><div style="font-size:0.54rem;color:#4a6a85;letter-spacing:0.09em;font-weight:700;margin-bottom:2px">HRV</div><div style="font-size:0.88rem;font-weight:800;color:' + cc(latest.avg_hrv,35,50) + '">' + ms(latest.avg_hrv) + '</div></div>' +
+          '<div><div style="font-size:0.54rem;color:#4a6a85;letter-spacing:0.09em;font-weight:700;margin-bottom:2px">LOAD</div><div style="font-size:0.88rem;font-weight:800;color:' + loadCol + '">' + lr(latest.load_ratio) + '</div></div>' +
+        '</div>' +
+        '<div style="font-size:0.6rem;font-weight:800;letter-spacing:0.1em;color:' + scCol + ';background:' + scCol + '1a;border:1px solid ' + scCol + '35;border-radius:4px;padding:4px 10px;flex-shrink:0">' + status + '</div>' +
+      '</div>';
+  } else {
+    summaryEl.innerHTML = '';
+  }
+
+  // ── Bar chart with component hover ──
   const colors = data.map(d => !d.readiness ? '#0d1f30' : d.readiness >= 75 ? '#00e5a0' : d.readiness >= 50 ? '#f59e0b' : '#f43f5e');
+  const customdata = data.map(d => [
+    d.avg_recovery != null ? Math.round(d.avg_recovery) : '—',
+    d.avg_sleep    != null ? Math.round(d.avg_sleep)    : '—',
+    d.avg_hrv      != null ? Math.round(d.avg_hrv)      : '—',
+    d.load_ratio   != null ? d.load_ratio.toFixed(2)    : '—',
+  ]);
   Plotly.newPlot('chartReadiness', [{
     x: data.map(d => d.week), y: data.map(d => d.readiness),
+    customdata: customdata,
     type: 'bar', marker: { color: colors },
-    hovertemplate: 'Week of %{x}<br>Readiness: %{y}%<extra></extra>',
+    hovertemplate:
+      '<b>%{y}% readiness</b><br>' +
+      'Recovery: %{customdata[0]}%<br>' +
+      'Sleep: %{customdata[1]}%<br>' +
+      'HRV: %{customdata[2]} ms<br>' +
+      'Load ratio: %{customdata[3]}' +
+      '<extra></extra>',
   }], {
     ...PLOTLY_LAYOUT,
     yaxis: { ...PLOTLY_LAYOUT.yaxis, range: [0, 110], title: 'Score' },
     shapes: [goalLine('y', 75, '#00e5a0'), goalLine('y', 50, '#f59e0b')],
     annotations: [
-      { xref: 'paper', x: 0.01, yref: 'y', y: 77, text: 'Good', showarrow: false, font: { color: '#00e5a0', size: 9 }, xanchor: 'left' },
-      { xref: 'paper', x: 0.01, yref: 'y', y: 52, text: 'Fair', showarrow: false, font: { color: '#f59e0b', size: 9 }, xanchor: 'left' },
+      { xref: 'paper', x: 0.01, yref: 'y', y: 77, text: 'Good',  showarrow: false, font: { color: '#00e5a0', size: 9 }, xanchor: 'left' },
+      { xref: 'paper', x: 0.01, yref: 'y', y: 52, text: 'Fair',  showarrow: false, font: { color: '#f59e0b', size: 9 }, xanchor: 'left' },
     ],
   }, PLOTLY_CONFIG);
 }
