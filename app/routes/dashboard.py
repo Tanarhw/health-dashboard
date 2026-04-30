@@ -1,5 +1,6 @@
+import base64
 from datetime import date, timedelta
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func
@@ -28,6 +29,26 @@ def monthly_report(request: Request, month: str = None):
 @router.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@router.post("/admin/seed-garmin")
+async def seed_garmin_tokens(request: Request):
+    """Accept garth token files from the local seed script and write them to the persistent volume."""
+    from app.sync.garmin import GARTH_TOKENS_DIR
+
+    body = await request.json()
+    if body.get("secret") != settings.secret_key:
+        raise HTTPException(status_code=403, detail="Invalid secret")
+
+    tokens: dict = body.get("tokens", {})
+    if not tokens:
+        raise HTTPException(status_code=400, detail="No token files provided")
+
+    GARTH_TOKENS_DIR.mkdir(parents=True, exist_ok=True)
+    for filename, b64content in tokens.items():
+        (GARTH_TOKENS_DIR / filename).write_bytes(base64.b64decode(b64content))
+
+    return {"status": "ok", "files_written": list(tokens.keys()), "token_dir": str(GARTH_TOKENS_DIR)}
 
 
 @router.get("/debug/garmin")
