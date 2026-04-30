@@ -8,17 +8,16 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4 fade-up delay-4">
   <div class="card">
     <div class="flex items-center justify-between mb-3">
-      <div class="text-sm font-semibold text-gray-300">Recovery & HRV</div>
+      <div class="chart-title">Recovery & HRV</div>
       <div class="flex items-center gap-3">
         <div class="flex gap-1">
           <button id="btnRecoveryLine" onclick="toggleTrace('chartRecovery', [0,1], this)"
-            class="text-xs px-2 py-0.5 rounded border transition" style="color:#00e5a0;border-color:#00e5a0">Recovery 7d avg</button>
+            class="text-xs px-2 py-0.5 rounded border transition" style="color:#00e5a0;border-color:#00e5a0">Recovery</button>
           <button id="btnHrvLine" onclick="toggleTrace('chartRecovery', [2,3], this)"
-            class="text-xs px-2 py-0.5 rounded border transition" style="color:#22d3ee;border-color:#22d3ee">HRV 7d avg</button>
+            class="text-xs px-2 py-0.5 rounded border transition" style="color:#22d3ee;border-color:#22d3ee">HRV</button>
         </div>
         <div class="flex gap-3 text-xs text-gray-500">
           <span class="flex items-center gap-1"><span style="display:inline-block;width:16px;border-top:1px dotted #00e5a0"></span>Goal</span>
-          <span class="flex items-center gap-1"><span style="display:inline-block;width:16px;border-top:2px solid #00e5a0;opacity:0.5"></span>7d avg</span>
         </div>
         <div id="toggleRecovery"></div>
       </div>
@@ -27,7 +26,7 @@
   </div>
   <div class="card">
     <div class="flex items-center justify-between mb-3">
-      <div class="text-sm font-semibold text-gray-300">Training Load</div>
+      <div class="chart-title">Training Load</div>
       <div class="flex items-center gap-3">
         <div class="flex gap-2 text-xs">
           <span class="tag tag-green">Optimal 0.8–1.3</span>
@@ -44,14 +43,14 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
   <div class="card">
     <div class="flex items-center justify-between mb-3">
-      <div class="text-sm font-semibold text-gray-300">Sleep</div>
+      <div class="chart-title">Sleep</div>
       <div id="toggleSleep"></div>
     </div>
     <div id="chartSleep" style="height:220px"></div>
   </div>
   <div class="card">
     <div class="flex items-center justify-between mb-3">
-      <div class="text-sm font-semibold text-gray-300">Weekly Volume</div>
+      <div class="chart-title">Weekly Volume</div>
       <div id="toggleVolume"></div>
     </div>
     <div id="chartVolume" style="height:220px"></div>
@@ -61,14 +60,14 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
   <div class="card">
     <div class="flex items-center justify-between mb-3">
-      <div class="text-sm font-semibold text-gray-300">Weekly Readiness Score</div>
+      <div class="chart-title">Weekly Readiness Score</div>
       <div id="toggleReadiness"></div>
     </div>
     <div id="chartReadiness" style="height:220px"></div>
   </div>
   <div class="card">
     <div class="flex items-center justify-between mb-3">
-      <div class="text-sm font-semibold text-gray-300">Strain vs Next-Day Recovery</div>
+      <div class="chart-title">Strain vs Next-Day Recovery</div>
       <div id="toggleStrain"></div>
     </div>
     <div class="text-xs text-gray-500 mb-2">Each dot is one day — colored by recovery score</div>
@@ -79,14 +78,14 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
   <div class="card">
     <div class="flex items-center justify-between mb-3">
-      <div class="text-sm font-semibold text-gray-300">VO2 Max Trend</div>
+      <div class="chart-title">VO2 Max Trend</div>
       <div id="toggleVo2"></div>
     </div>
     <div id="chartVo2" style="height:200px"></div>
   </div>
   <div class="card">
     <div class="flex items-center justify-between mb-3">
-      <div class="text-sm font-semibold text-gray-300">Body Battery & Stress</div>
+      <div class="chart-title">Body Battery & Stress</div>
       <div id="toggleGarmin"></div>
     </div>
     <div id="chartGarmin" style="height:200px"></div>
@@ -95,7 +94,7 @@
 
 <div class="card mb-4">
   <div class="flex items-center justify-between mb-3">
-    <div class="text-sm font-semibold text-gray-300">Weekly Time in Heart Rate Zones</div>
+    <div class="chart-title">Weekly Time in Heart Rate Zones</div>
     <div class="flex items-center gap-3">
       <div class="flex gap-2 text-xs" style="color:#64748b">
         <span class="flex items-center gap-1"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#1e4d6b"></span>Z1 Recovery</span>
