@@ -68,6 +68,11 @@ def api_sleep(days: int = 60, db: Session = Depends(get_db)):
             "total_sleep_hours": r.total_sleep_hours,
             "sleep_efficiency": r.sleep_efficiency,
             "sleep_score": r.sleep_score,
+            "rem_hours": r.rem_hours,
+            "light_hours": r.light_hours,
+            "sws_hours": r.sws_hours,
+            "awake_hours": r.awake_hours,
+            "disturbances": r.disturbances,
         }
         for r in rows
     ]

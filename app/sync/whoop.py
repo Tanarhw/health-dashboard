@@ -139,14 +139,29 @@ def sync_sleep(db: Session, client_id: str, client_secret: str, days: int = 90):
         score = sleep.get("score") or {}
         stage = score.get("stage_summary") or {}
 
+        def ms_to_h(key):
+            return round(stage.get(key, 0) / 3_600_000, 2)
+
         existing = db.query(WhoopSleep).filter_by(sleep_id=sleep_id).first()
-        if not existing:
+        if existing:
+            if existing.rem_hours is None:
+                existing.rem_hours   = ms_to_h("total_rem_sleep_time_milli")
+                existing.light_hours = ms_to_h("total_light_sleep_time_milli")
+                existing.sws_hours   = ms_to_h("total_slow_wave_sleep_time_milli")
+                existing.awake_hours = ms_to_h("total_awake_time_milli")
+                existing.disturbances = stage.get("disturbance_count")
+        else:
             db.add(WhoopSleep(
                 sleep_id=sleep_id,
                 date=sleep_date,
-                total_sleep_hours=round(stage.get("total_in_bed_time_milli", 0) / 3_600_000, 2),
+                total_sleep_hours=ms_to_h("total_in_bed_time_milli"),
                 sleep_efficiency=score.get("sleep_efficiency_percentage"),
                 sleep_score=score.get("sleep_performance_percentage"),
+                rem_hours=ms_to_h("total_rem_sleep_time_milli"),
+                light_hours=ms_to_h("total_light_sleep_time_milli"),
+                sws_hours=ms_to_h("total_slow_wave_sleep_time_milli"),
+                awake_hours=ms_to_h("total_awake_time_milli"),
+                disturbances=stage.get("disturbance_count"),
             ))
 
     db.commit()

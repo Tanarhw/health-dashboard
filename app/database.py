@@ -28,11 +28,16 @@ def init_db():
 def _migrate():
     """Add columns that didn't exist in earlier schema versions."""
     new_cols = [
-        ("activities", "zone1_secs", "INTEGER"),
-        ("activities", "zone2_secs", "INTEGER"),
-        ("activities", "zone3_secs", "INTEGER"),
-        ("activities", "zone4_secs", "INTEGER"),
-        ("activities", "zone5_secs", "INTEGER"),
+        ("activities",  "zone1_secs",   "INTEGER"),
+        ("activities",  "zone2_secs",   "INTEGER"),
+        ("activities",  "zone3_secs",   "INTEGER"),
+        ("activities",  "zone4_secs",   "INTEGER"),
+        ("activities",  "zone5_secs",   "INTEGER"),
+        ("whoop_sleep", "rem_hours",    "REAL"),
+        ("whoop_sleep", "light_hours",  "REAL"),
+        ("whoop_sleep", "sws_hours",    "REAL"),
+        ("whoop_sleep", "awake_hours",  "REAL"),
+        ("whoop_sleep", "disturbances", "INTEGER"),
     ]
     with engine.connect() as conn:
         for table, col, typ in new_cols:

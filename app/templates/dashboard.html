@@ -43,8 +43,16 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
   <div class="card">
     <div class="flex items-center justify-between mb-3">
-      <div class="chart-title">Sleep</div>
-      <div id="toggleSleep"></div>
+      <div class="chart-title">Sleep Stages</div>
+      <div class="flex items-center gap-3">
+        <div class="flex gap-3 text-xs" style="color:#64748b">
+          <span class="flex items-center gap-1"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#1e3a52"></span>Awake</span>
+          <span class="flex items-center gap-1"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#1d4ed8"></span>Light</span>
+          <span class="flex items-center gap-1"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#06b6d4"></span>Deep</span>
+          <span class="flex items-center gap-1"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#8b5cf6"></span>REM</span>
+        </div>
+        <div id="toggleSleep"></div>
+      </div>
     </div>
     <div id="chartSleep" style="height:220px"></div>
   </div>
@@ -277,17 +285,38 @@ function renderLoadChart(data) {
 }
 
 function renderSleepChart(data) {
-  Plotly.newPlot('chartSleep', [
-    { x: data.map(d => d.date), y: data.map(d => d.total_sleep_hours), name: 'Hours', type: 'bar', marker: { color: 'rgba(59,130,246,0.7)' } },
-    { x: data.map(d => d.date), y: data.map(d => d.sleep_efficiency), name: 'Efficiency %', type: 'scatter', mode: 'lines', line: { color: '#f59e0b', width: 2 }, yaxis: 'y2' },
-  ], {
-    ...PLOTLY_LAYOUT,
-    yaxis: { ...PLOTLY_LAYOUT.yaxis, title: 'Hours' },
-    yaxis2: { overlaying: 'y', side: 'right', gridcolor: 'transparent', range: [0, 100], title: 'Efficiency %', color: '#f59e0b' },
-    barmode: 'overlay',
+  const dates = data.map(d => d.date);
+  const hasStages = data.some(d => d.rem_hours != null);
+  const layout = {
+    ...PLOTLY_LAYOUT, barmode: 'stack',
+    yaxis:  { ...PLOTLY_LAYOUT.yaxis, title: 'Hours', rangemode: 'tozero' },
+    yaxis2: { overlaying: 'y', side: 'right', gridcolor: 'transparent', range: [0, 110], title: 'Score %', color: '#f59e0b', showgrid: false },
     shapes: [goalLine('y', GOALS.sleep_hours, '#3b82f6')],
-    annotations: [{ xref: 'paper', x: 0.01, yref: 'y', y: GOALS.sleep_hours + 0.15, text: `Goal ${GOALS.sleep_hours}h`, showarrow: false, font: { color: '#3b82f6', size: 9 }, xanchor: 'left' }],
-  }, PLOTLY_CONFIG);
+    annotations: [{ xref: 'paper', x: 0.01, yref: 'y', y: GOALS.sleep_hours + 0.2, text: 'Goal ' + GOALS.sleep_hours + 'h', showarrow: false, font: { color: '#3b82f6', size: 9 }, xanchor: 'left' }],
+  };
+  if (hasStages) {
+    Plotly.newPlot('chartSleep', [
+      { x: dates, y: data.map(d => d.awake_hours || 0), name: 'Awake',
+        type: 'bar', marker: { color: '#1e3a52' }, hovertemplate: 'Awake: %{y:.1f}h<extra></extra>' },
+      { x: dates, y: data.map(d => d.light_hours || 0), name: 'Light',
+        type: 'bar', marker: { color: '#1d4ed8' }, hovertemplate: 'Light: %{y:.1f}h<extra></extra>' },
+      { x: dates, y: data.map(d => d.sws_hours  || 0), name: 'Deep',
+        type: 'bar', marker: { color: '#06b6d4' }, hovertemplate: 'Deep: %{y:.1f}h<extra></extra>' },
+      { x: dates, y: data.map(d => d.rem_hours  || 0), name: 'REM',
+        type: 'bar', marker: { color: '#8b5cf6' }, hovertemplate: 'REM: %{y:.1f}h<extra></extra>' },
+      { x: dates, y: data.map(d => d.sleep_score), name: 'Score',
+        type: 'scatter', mode: 'lines', line: { color: '#f59e0b', width: 2 },
+        yaxis: 'y2', hovertemplate: 'Score: %{y:.0f}%<extra></extra>' },
+    ], layout, PLOTLY_CONFIG);
+  } else {
+    Plotly.newPlot('chartSleep', [
+      { x: dates, y: data.map(d => d.total_sleep_hours), name: 'Total Hours',
+        type: 'bar', marker: { color: '#1d4ed8' }, hovertemplate: '%{y:.1f}h<extra></extra>' },
+      { x: dates, y: data.map(d => d.sleep_score), name: 'Score',
+        type: 'scatter', mode: 'lines', line: { color: '#f59e0b', width: 2 },
+        yaxis: 'y2', hovertemplate: 'Score: %{y:.0f}%<extra></extra>' },
+    ], layout, PLOTLY_CONFIG);
+  }
 }
 
 function renderVolumeChart(activities) {

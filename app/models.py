@@ -36,6 +36,11 @@ class WhoopSleep(Base):
     total_sleep_hours: Mapped[float] = mapped_column(Float, nullable=True)
     sleep_efficiency: Mapped[float] = mapped_column(Float, nullable=True)
     sleep_score: Mapped[float] = mapped_column(Float, nullable=True)
+    rem_hours: Mapped[float] = mapped_column(Float, nullable=True)
+    light_hours: Mapped[float] = mapped_column(Float, nullable=True)
+    sws_hours: Mapped[float] = mapped_column(Float, nullable=True)
+    awake_hours: Mapped[float] = mapped_column(Float, nullable=True)
+    disturbances: Mapped[int] = mapped_column(Integer, nullable=True)
 
 
 class GarminDaily(Base):
