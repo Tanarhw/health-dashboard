@@ -22,6 +22,16 @@ def _client(email: str, password: str):
         except Exception as e:
             print(f"[garmin] Cached token login failed ({e}), retrying with fresh login")
 
+    # Don't attempt SSO when running non-interactively (e.g. on Railway).
+    # Repeated failed SSO attempts keep the account rate-limited.
+    # Run scripts/seed_garmin_from_browser.py locally to seed tokens.
+    import sys
+    if not sys.stdin.isatty():
+        raise RuntimeError(
+            "No Garmin tokens cached. Seed them locally with "
+            "scripts/seed_garmin_from_browser.py, then sync again."
+        )
+
     print("[garmin] Performing fresh Garmin login")
     client = Garmin(email, password)
     client.login()
