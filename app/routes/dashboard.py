@@ -382,6 +382,74 @@ def api_readiness(weeks: int = 12, db: Session = Depends(get_db)):
     return result
 
 
+@router.get("/api/weekly-summary")
+def api_weekly_summary(db: Session = Depends(get_db)):
+    if not settings.anthropic_api_key:
+        raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY not configured")
+
+    import anthropic
+
+    today = date.today()
+    week_ago = today - timedelta(days=7)
+
+    recovery = db.query(WhoopRecovery).filter(WhoopRecovery.date >= week_ago).order_by(WhoopRecovery.date).all()
+    sleep_rows = db.query(WhoopSleep).filter(WhoopSleep.date >= week_ago).order_by(WhoopSleep.date).all()
+    activities = db.query(Activity).filter(Activity.date >= week_ago).order_by(Activity.date).all()
+    training = db.query(GarminTrainingLoad).filter(GarminTrainingLoad.date >= week_ago).order_by(GarminTrainingLoad.date).all()
+    garmin = db.query(GarminDaily).filter(GarminDaily.date >= week_ago).order_by(GarminDaily.date).all()
+
+    def safe_avg(vals):
+        v = [x for x in vals if x is not None]
+        return round(sum(v) / len(v), 1) if v else None
+
+    def fmt(val, unit=""):
+        return f"{val}{unit}" if val is not None else "N/A"
+
+    activity_lines = "\n".join(
+        f"  - {a.date}: {a.name or a.sport_type} — {round(a.duration_seconds / 60)}min"
+        + (f", {round(a.distance_meters / 1609.344, 1)} mi" if a.distance_meters else "")
+        + (f", avg HR {a.avg_hr} bpm" if a.avg_hr else "")
+        for a in activities
+    ) or "  No activities recorded"
+
+    prompt = f"""You are a personal health coach reviewing one week of training and recovery data. Write a warm, specific 2–3 paragraph "Week in Review" summary in plain English. Reference actual numbers, highlight what went well, note any concerns, and close with one clear focus for the coming week.
+
+Week ending {today.isoformat()}:
+
+RECOVERY (Whoop)
+- Avg recovery score: {fmt(safe_avg([r.recovery_score for r in recovery]), '%')}
+- Avg HRV: {fmt(safe_avg([r.hrv_rmssd for r in recovery]), ' ms')}
+- Avg resting HR: {fmt(safe_avg([r.resting_hr for r in recovery]), ' bpm')}
+- Avg strain: {fmt(safe_avg([r.strain for r in recovery]))}
+
+SLEEP (Whoop)
+- Avg duration: {fmt(safe_avg([s.total_sleep_hours for s in sleep_rows]), ' hrs')}
+- Avg efficiency: {fmt(safe_avg([s.sleep_efficiency for s in sleep_rows]), '%')}
+- Avg sleep score: {fmt(safe_avg([s.sleep_score for s in sleep_rows]), '%')}
+
+ACTIVITIES ({len(activities)} total)
+{activity_lines}
+
+TRAINING LOAD (Garmin)
+- Avg acute load (ATL): {fmt(safe_avg([t.acute_load for t in training]))}
+- Avg chronic load (CTL): {fmt(safe_avg([t.chronic_load for t in training]))}
+- Latest status: {training[-1].training_status if training else 'N/A'}
+
+WELLBEING (Garmin)
+- Avg body battery: {fmt(safe_avg([g.body_battery_end for g in garmin]))}
+- Avg stress: {fmt(safe_avg([g.stress_avg for g in garmin]))}
+- Avg daily steps: {fmt(safe_avg([g.steps for g in garmin]))}
+"""
+
+    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    message = client.messages.create(
+        model="claude-opus-4-7",
+        max_tokens=1024,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return {"summary": message.content[0].text, "week_ending": today.isoformat()}
+
+
 def _group_by_sport(activities: list) -> dict:
     result = {}
     for a in activities:

@@ -175,7 +175,7 @@ def sync_workouts(db: Session, client_id: str, client_secret: str, days: int = 9
 
     start = (date.today() - timedelta(days=days)).isoformat() + "T00:00:00.000Z"
 
-    for workout in _paginate(f"{WHOOP_BASE}/workout", _headers(token), start):
+    for workout in _paginate(f"{WHOOP_BASE}/activity/workout", _headers(token), start):
         external_id = str(workout["id"])
         existing = db.query(Activity).filter_by(source="whoop", external_id=external_id).first()
         if existing:

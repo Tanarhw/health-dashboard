@@ -17,19 +17,16 @@ def _client(email: str, password: str):
             garth.resume(str(GARTH_TOKENS_DIR))
             client = Garmin(email, password)
             client.garth = garth.client
-            client.login()
+            # Populate display_name needed for user-specific API URLs
+            client.display_name = garth.client.profile.get("displayName") or garth.client.profile.get("userName")
             return client
         except Exception as e:
-            print(f"[garmin] Cached token login failed ({e}), retrying with fresh login")
+            print(f"[garmin] Cached token load failed ({e}), trying fresh login")
 
-    # Don't attempt SSO when running non-interactively (e.g. on Railway).
-    # Repeated failed SSO attempts keep the account rate-limited.
-    # Run scripts/seed_garmin_from_browser.py locally to seed tokens.
     import sys
     if not sys.stdin.isatty():
         raise RuntimeError(
-            "No Garmin tokens cached. Seed them locally with "
-            "scripts/seed_garmin_from_browser.py, then sync again."
+            "No Garmin tokens cached. Run scripts/garmin_browser_auth.py to authenticate."
         )
 
     print("[garmin] Performing fresh Garmin login")
@@ -83,41 +80,35 @@ def sync_training_load(db: Session, email: str, password: str):
         print(f"[garmin] sync_training_load auth failed: {e}")
         return
 
-    try:
-        raw = client.get_training_load()
-        print(f"[garmin] get_training_load returned type={type(raw).__name__} len={len(raw) if isinstance(raw, list) else 'n/a'}")
-    except Exception as e:
-        print(f"[garmin] get_training_load failed: {e}")
-        raw = None
-
-    if not raw:
-        # Fallback: try get_training_status which some garminconnect versions expose
-        try:
-            end = date.today().isoformat()
-            start = (date.today() - timedelta(weeks=16)).isoformat()
-            raw = client.get_training_status(start, end)
-            print(f"[garmin] get_training_status fallback returned type={type(raw).__name__}")
-        except Exception as e:
-            print(f"[garmin] get_training_status fallback also failed: {e}")
-            return
-
     added = 0
-    for entry in raw if isinstance(raw, list) else []:
-        cal_date = entry.get("calendarDate") or entry.get("date") or ""
-        try:
-            d = date.fromisoformat(cal_date[:10])
-        except (ValueError, TypeError):
-            continue
-
+    for i in range(16 * 7):
+        d = date.today() - timedelta(days=i)
         if db.query(GarminTrainingLoad).filter_by(date=d).first():
             continue
+        try:
+            raw = client.get_training_status(d.isoformat())
+        except Exception as e:
+            print(f"[garmin] get_training_status({d}) failed: {e}")
+            continue
 
-        # Field names vary across garminconnect/API versions
-        acute = entry.get("acuteLoad") or entry.get("acuteTrainingLoad")
-        chronic = entry.get("chronicLoad") or entry.get("chronicTrainingLoad")
-        status = entry.get("trainingStatus") or entry.get("trainingStatusPhase")
+        # Response is a dict; training load lives under mostRecentTrainingStatus
+        status_data = raw.get("mostRecentTrainingStatus", {}).get("latestTrainingStatusData", {})
+        entry = next(iter(status_data.values()), {}) if status_data else {}
+        atl_dto = entry.get("acuteTrainingLoadDTO") or {}
 
-        db.add(GarminTrainingLoad(date=d, acute_load=acute, chronic_load=chronic, training_status=status))
+        acute = atl_dto.get("dailyTrainingLoadAcute")
+        chronic = atl_dto.get("dailyTrainingLoadChronic")
+        status = entry.get("trainingStatusFeedbackPhrase") or entry.get("trainingStatus")
+
+        db.add(GarminTrainingLoad(date=d, acute_load=acute, chronic_load=chronic, training_status=str(status) if status else None))
+
+        # Backfill vo2max onto the daily row if missing
+        vo2 = raw.get("mostRecentVO2Max", {}).get("generic", {}).get("vo2MaxPreciseValue")
+        if vo2:
+            daily_row = db.query(GarminDaily).filter_by(date=d).first()
+            if daily_row and daily_row.vo2max is None:
+                daily_row.vo2max = vo2
+
         added += 1
 
     db.commit()
@@ -126,15 +117,10 @@ def sync_training_load(db: Session, email: str, password: str):
 
 def _apply_garmin_zones(client, row: Activity, activity_id: str):
     try:
-        details = client.get_activity_details(activity_id)
-        zones = (
-            details.get("heartRateZones")
-            or details.get("hrTimeInZones")
-            or []
-        )
+        zones = client.get_activity_hr_in_timezones(activity_id)
         for z in zones:
-            n = z.get("zoneNumber") or z.get("zone") or 0
-            s = int(z.get("secsInZone") or z.get("seconds") or 0)
+            n = z.get("zoneNumber") or 0
+            s = int(z.get("secsInZone") or 0)
             if 1 <= n <= 5:
                 setattr(row, f"zone{n}_secs", s)
     except Exception:

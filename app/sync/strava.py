@@ -56,24 +56,30 @@ def sync_activities(db: Session, client_id: str, client_secret: str, days: int =
         raise RuntimeError("Strava not connected — visit /auth/strava")
     _refresh_if_needed(db, token, client_id, client_secret)
 
-    after = int((datetime.now(timezone.utc) - timedelta(days=days)).timestamp())
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     headers = {"Authorization": f"Bearer {token.access_token}"}
     page = 1
+    backfill_budget = 20
 
     while True:
         resp = httpx.get(
             f"{STRAVA_BASE}/athlete/activities",
             headers=headers,
-            params={"after": after, "per_page": 100, "page": page},
+            params={"per_page": 100, "page": page},
         )
         resp.raise_for_status()
         activities = resp.json()
         if not activities:
             break
 
-        backfill_budget = 20
-
+        stop = False
         for act in activities:
+            act_date = date.fromisoformat(act["start_date_local"][:10])
+            act_dt = datetime.fromisoformat(act["start_date_local"][:10]).replace(tzinfo=timezone.utc)
+            if act_dt < cutoff:
+                stop = True
+                break
+
             external_id = str(act["id"])
             existing = db.query(Activity).filter_by(source="strava", external_id=external_id).first()
             if existing:
@@ -82,7 +88,6 @@ def sync_activities(db: Session, client_id: str, client_secret: str, days: int =
                     backfill_budget -= 1
                 continue
 
-            act_date = date.fromisoformat(act["start_date_local"][:10])
             row = Activity(
                 source="strava",
                 external_id=external_id,
@@ -101,4 +106,6 @@ def sync_activities(db: Session, client_id: str, client_secret: str, days: int =
                 _apply_strava_zones(row, external_id, headers)
 
         db.commit()
+        if stop:
+            break
         page += 1

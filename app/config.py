@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     garmin_email: str = ""
     garmin_password: str = ""
 
+    anthropic_api_key: str = ""
+
     secret_key: str = "changeme"
 
     model_config = {"env_file": ".env"}

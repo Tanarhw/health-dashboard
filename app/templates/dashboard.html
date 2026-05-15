@@ -5,6 +5,20 @@
 {% block content %}
 <div id="statCards" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6"></div>
 
+<div class="card mb-4 fade-up delay-1" id="weekInReview">
+  <div class="flex items-center justify-between mb-3">
+    <div class="chart-title">Week in Review</div>
+    <button id="btnGenerateSummary" onclick="generateWeeklySummary()"
+      style="font-size:0.68rem;font-weight:700;letter-spacing:0.06em;padding:5px 14px;border-radius:5px;background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.3);color:#00e5a0;cursor:pointer;transition:all 0.2s"
+      onmouseover="this.style.background='rgba(0,229,160,0.2)'" onmouseout="this.style.background='rgba(0,229,160,0.1)'">
+      Generate AI Summary
+    </button>
+  </div>
+  <div id="weeklySummaryContent" style="font-size:0.82rem;line-height:1.75;color:#94a3b8;min-height:2.5rem">
+    <span style="color:#3d5570;font-style:italic">Click "Generate AI Summary" to get a personalized recap of your week.</span>
+  </div>
+</div>
+
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4 fade-up delay-4">
   <div class="card">
     <div class="flex items-center justify-between mb-3">
@@ -222,7 +236,7 @@ async function loadDashboard() {
     fetch('/api/recovery?days=30').then(r => r.json()),
     fetch('/api/sleep?days=30').then(r => r.json()),
     fetch('/api/training-load?weeks=8').then(r => r.json()),
-    fetch('/api/activities?weeks=4').then(r => r.json()),
+    fetch('/api/activities?weeks=8').then(r => r.json()),
     fetch('/api/garmin-daily?days=30').then(r => r.json()),
     fetch('/api/readiness?weeks=4').then(r => r.json()),
     fetch('/api/vo2max?days=90').then(r => r.json()),
@@ -242,7 +256,7 @@ async function loadDashboard() {
   makeToggle('toggleRecovery',  DAYS,   30,  async d => renderRecoveryChart(await fetch(`/api/recovery?days=${d}`).then(r => r.json())));
   makeToggle('toggleLoad',      WEEKS,   8,  async w => renderLoadChart(await fetch(`/api/training-load?weeks=${w}`).then(r => r.json())));
   makeToggle('toggleSleep',     DAYS,   30,  async d => renderSleepChart(await fetch(`/api/sleep?days=${d}`).then(r => r.json())));
-  makeToggle('toggleVolume',    WKSM,    4,  async w => renderVolumeChart(await fetch(`/api/activities?weeks=${w}`).then(r => r.json())));
+  makeToggle('toggleVolume',    WKSM,    8,  async w => renderVolumeChart(await fetch(`/api/activities?weeks=${w}`).then(r => r.json())));
   makeToggle('toggleReadiness', WKSM,    4,  async w => renderReadinessChart(await fetch(`/api/readiness?weeks=${w}`).then(r => r.json())));
   makeToggle('toggleStrain',    DAYS,   30,  async d => renderStrainRecovery(await fetch(`/api/recovery?days=${d}`).then(r => r.json())));
   makeToggle('toggleVo2',       MTHS,   90,  async d => renderVo2Chart(await fetch(`/api/vo2max?days=${d}`).then(r => r.json())));
@@ -729,6 +743,33 @@ function renderPersonalRecords(activities) {
         <div style="font-size:0.58rem;color:#3d5570;margin-top:1px">${r.date}</div>
       </div>
     </div>`).join('');
+}
+
+async function generateWeeklySummary() {
+  const btn = document.getElementById('btnGenerateSummary');
+  const content = document.getElementById('weeklySummaryContent');
+  btn.disabled = true;
+  btn.textContent = 'Generating...';
+  btn.style.opacity = '0.6';
+  content.innerHTML = '<span style="color:#3d5570;font-style:italic">Analyzing your week...</span>';
+  try {
+    const resp = await fetch('/api/weekly-summary');
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || resp.statusText);
+    }
+    const data = await resp.json();
+    const paragraphs = data.summary.split(/\n\n+/).filter(p => p.trim());
+    content.innerHTML = paragraphs.map(p =>
+      `<p style="margin-bottom:0.85rem;color:#cbd5e1">${p.trim()}</p>`
+    ).join('');
+  } catch (e) {
+    content.innerHTML = `<span style="color:#f43f5e">Error: ${e.message}</span>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Regenerate';
+    btn.style.opacity = '1';
+  }
 }
 
 loadDashboard();
